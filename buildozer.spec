@@ -15,6 +15,7 @@ orientation = portrait
 fullscreen = 0
 
 android.permissions =
+android.accept_sdk_license = True
 
 [buildozer]
 
