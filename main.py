@@ -37,7 +37,8 @@ food = ["Pizza",
         "Melanzane",
         "Patate",
         "Risotto ai funghi",
-        "Risotto allo zafferano"]
+        "Risotto allo zafferano",
+        "Cibo cinese"]
 
 
 class RoundedButton(Button):
