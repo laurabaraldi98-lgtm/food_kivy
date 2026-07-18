@@ -30,6 +30,16 @@ Users can:
 
 The food list is stored locally in a JSON file. This means that changes remain saved even after the application is closed and reopened.
 
+## Screenshots
+
+### Main screen
+
+![Food App main screen](screenshots/home.png)
+
+### Food list management
+
+![Food list management screen](screenshots/food-list.png)
+
 ## Technologies Used
 
 * Python
