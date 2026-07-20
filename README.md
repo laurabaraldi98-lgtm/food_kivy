@@ -6,6 +6,12 @@ The app helps users decide what to eat by randomly selecting a food from a custo
 
 The application interface is currently in Italian.
 
+## Why I Built This
+
+This project started from a very common problem: deciding what to eat. Every day, the same question came up — "What should we have for dinner?" — followed by the same uncertain "I don't know, whatever."
+
+Instead of letting indecision drag on, I built a small app that picks a suggestion for you. You keep a list of foods you actually eat, and when you can't decide, the app decides for you. Simple, but it solves a real everyday annoyance.
+
 ## Features
 
 * Random food suggestion
