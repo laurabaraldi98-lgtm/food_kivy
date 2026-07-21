@@ -16,33 +16,10 @@ from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY
 
 import random
-import json
-import os
 
 
 Window.size = (360, 640)
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
-
-
-food = ["Pizza",
-        "Pasta tonno e pomodorini",
-        "Bruschette",
-        "Tramezzini",
-        "Piadina",
-        "Pasta pomodoro e mozzarella",
-        "Pasta pomodorini e mozzarella",
-        "Pesce",
-        "Pasta ai funghi",
-        "Pasta al pesto",
-        "Insalata",
-        "Minestrina",
-        "Tortelli",
-        "Zucchine",
-        "Melanzane",
-        "Patate",
-        "Risotto ai funghi",
-        "Risotto allo zafferano",
-        "Cibo cinese"]
 
 
 class RoundedButton(Button):
@@ -72,8 +49,6 @@ class RoundedButton(Button):
 class FoodApp(App):
     def build(self):
         self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-        self.food_file = os.path.join(self.user_data_dir, "foods.json")
         self.food = self.load_food()
 
         root = FloatLayout()
@@ -150,19 +125,20 @@ class FoodApp(App):
         return root
 
     def load_food(self):
-        response = self.supabase.table("foods").select("*").execute()
+        response = self.supabase.table("foods").select("name").execute()
 
         supabase_food = []
 
         for item in response.data:
             supabase_food.append(item["name"])
 
-        if supabase_food:
-            return supabase_food
-
-        return food.copy()
+        return supabase_food
 
     def choose_food(self, instance):
+        if not self.food:
+            self.result.text = "[b]Aggiungi prima qualche cibo[/b]"
+            return
+
         choice = random.choice(self.food)
         self.result.text = f"[b]{choice}[/b]"
 
