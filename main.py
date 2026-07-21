@@ -11,6 +11,10 @@ from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
+
+from supabase import create_client
+from config import SUPABASE_URL, SUPABASE_KEY
+
 import random
 import json
 import os
@@ -67,6 +71,8 @@ class RoundedButton(Button):
 
 class FoodApp(App):
     def build(self):
+        self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
         self.food_file = os.path.join(self.user_data_dir, "foods.json")
         self.food = self.load_food()
 
@@ -144,15 +150,17 @@ class FoodApp(App):
         return root
 
     def load_food(self):
-        if os.path.exists(self.food_file):
-            with open(self.food_file, "r", encoding="utf-8") as file:
-                return json.load(file)
+        response = self.supabase.table("foods").select("*").execute()
+
+        supabase_food = []
+
+        for item in response.data:
+            supabase_food.append(item["name"])
+
+        if supabase_food:
+            return supabase_food
 
         return food.copy()
-
-    def save_food(self):
-        with open(self.food_file, "w", encoding="utf-8") as file:
-            json.dump(self.food, file, ensure_ascii=False, indent=4)
 
     def choose_food(self, instance):
         choice = random.choice(self.food)
@@ -233,16 +241,18 @@ class FoodApp(App):
                 new_food = new_food[0].upper() + new_food[1:]
 
                 if new_food not in self.food:
+                    self.supabase.table("foods").insert({
+                        "name": new_food
+                    }).execute()
+
                     self.food.append(new_food)
-                    self.save_food()
                     refresh_list()
                     status_label.text = f"Aggiunto: {new_food}"
-                    Clock.schedule_once(clear_status, 3)
                 else:
                     status_label.text = f"{new_food} è già nella lista"
-                    Clock.schedule_once(clear_status, 3)
 
-            add_input.text = ""
+                Clock.schedule_once(clear_status, 3)
+                add_input.text = ""
 
         def delete_food_from_popup(instance):
             food_to_delete = delete_input.text.strip()
@@ -251,11 +261,12 @@ class FoodApp(App):
                 food_to_delete = food_to_delete[0].upper() + food_to_delete[1:]
 
                 if food_to_delete in self.food:
+                    self.supabase.table("foods").delete().eq(
+                        "name", food_to_delete).execute()
+
                     self.food.remove(food_to_delete)
-                    self.save_food()
                     refresh_list()
                     status_label.text = f"Eliminato: {food_to_delete}"
-                    Clock.schedule_once(clear_status, 3)
                 else:
                     status_label.text = f"{food_to_delete} non è nella lista"
 
