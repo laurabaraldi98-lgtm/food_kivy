@@ -32,6 +32,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "cython<3.1" buildozer
 
+      - name: Create config.py
+        run: |
+          echo 'SUPABASE_URL = "${{ secrets.SUPABASE_URL }}"' > config.py
+          echo 'SUPABASE_KEY = "${{ secrets.SUPABASE_KEY }}"' >> config.py
+
       - name: Build APK
         run: |
           java -version
@@ -39,7 +44,6 @@ jobs:
           buildozer android debug
 
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: food-app-apk
