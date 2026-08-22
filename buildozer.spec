@@ -9,7 +9,7 @@ source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,csv,ttf
 
 version = 0.1
 
-requirements = python3,kivy,supabase,requests,certifi,urllib3,idna,charset_normalizer
+requirements = python3,kivy,supabase==2.31.0,supabase_auth==2.31.0,requests,certifi,urllib3,idna,charset_normalizer
 
 orientation = portrait
 fullscreen = 0
