@@ -38,6 +38,8 @@ jobs:
           echo 'SUPABASE_KEY = "${{ secrets.SUPABASE_KEY }}"' >> config.py
 
       - name: Build APK
+        env:
+          ANDROID_API_LEVEL: "24"
         run: |
           java -version
           python --version
