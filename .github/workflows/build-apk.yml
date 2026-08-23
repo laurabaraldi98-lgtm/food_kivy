@@ -10,11 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
-    env:
-      ANDROID_API_LEVEL: "24"
-      ANDROIDAPI: "35"
-      NDKAPI: "24"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,9 +41,6 @@ jobs:
         run: |
           java -version
           python --version
-          echo "ANDROID_API_LEVEL=$ANDROID_API_LEVEL"
-          echo "ANDROIDAPI=$ANDROIDAPI"
-          echo "NDKAPI=$NDKAPI"
           buildozer android debug
 
       - name: Upload APK

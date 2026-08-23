@@ -12,8 +12,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 
-from supabase import create_client
-from config import SUPABASE_URL, SUPABASE_KEY
+from supabase_client import get_foods, add_food, delete_food
 
 import random
 
@@ -48,7 +47,6 @@ class RoundedButton(Button):
 
 class FoodApp(App):
     def build(self):
-        self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         self.food = self.load_food()
 
         root = FloatLayout()
@@ -89,8 +87,9 @@ class FoodApp(App):
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1)
         )
+
         self.result = Label(
-            text=f"",
+            text="",
             font_size=40,
             markup=True,
             size_hint_y=None,
@@ -125,14 +124,7 @@ class FoodApp(App):
         return root
 
     def load_food(self):
-        response = self.supabase.table("foods").select("name").execute()
-
-        supabase_food = []
-
-        for item in response.data:
-            supabase_food.append(item["name"])
-
-        return supabase_food
+        return get_foods()
 
     def choose_food(self, instance):
         if not self.food:
@@ -217,9 +209,7 @@ class FoodApp(App):
                 new_food = new_food[0].upper() + new_food[1:]
 
                 if new_food not in self.food:
-                    self.supabase.table("foods").insert({
-                        "name": new_food
-                    }).execute()
+                    add_food(new_food)
 
                     self.food.append(new_food)
                     refresh_list()
@@ -237,8 +227,7 @@ class FoodApp(App):
                 food_to_delete = food_to_delete[0].upper() + food_to_delete[1:]
 
                 if food_to_delete in self.food:
-                    self.supabase.table("foods").delete().eq(
-                        "name", food_to_delete).execute()
+                    delete_food(food_to_delete)
 
                     self.food.remove(food_to_delete)
                     refresh_list()
