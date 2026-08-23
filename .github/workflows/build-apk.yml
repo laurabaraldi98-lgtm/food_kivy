@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
+    env:
+      ANDROID_API_LEVEL: "24"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,11 +41,10 @@ jobs:
           echo 'SUPABASE_KEY = "${{ secrets.SUPABASE_KEY }}"' >> config.py
 
       - name: Build APK
-        env:
-          ANDROID_API_LEVEL: "24"
         run: |
           java -version
           python --version
+          echo "ANDROID_API_LEVEL=$ANDROID_API_LEVEL"
           buildozer android debug
 
       - name: Upload APK
