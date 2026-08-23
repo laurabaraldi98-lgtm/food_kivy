@@ -18,6 +18,10 @@ android.permissions = INTERNET
 
 android.accept_sdk_license = True
 
+p4a.branch = develop
+p4a.commit = 0382d27de2f7315ed98e74884bafb30365decdee
+
+
 [buildozer]
 
 log_level = 2
