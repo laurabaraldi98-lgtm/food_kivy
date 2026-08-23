@@ -1,24 +1,30 @@
 from kivy.app import App
 from kivy.uix.label import Label
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.core.window import Window
-from kivy.uix.widget import Widget
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
+from kivy.utils import platform
 
 from supabase_client import get_foods, add_food, delete_food
 
 import random
 
 
-Window.size = (360, 640)
+if platform not in ("android", "ios"):
+    Window.size = (360, 640)
+
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
+
+
+def clamp(value, minimum, maximum):
+    return max(minimum, min(value, maximum))
 
 
 class RoundedButton(Button):
@@ -30,7 +36,7 @@ class RoundedButton(Button):
         self.background_color = (0, 0, 0, 0)
 
         with self.canvas.before:
-            Color(*self.my_color)
+            self.button_color = Color(*self.my_color)
             self.rounded_rect = RoundedRectangle(
                 size=self.size,
                 pos=self.pos,
@@ -61,67 +67,81 @@ class FoodApp(App):
 
         root.add_widget(background)
 
-        layout = BoxLayout(
-            orientation="vertical",
-            padding=60,
-            spacing=50,
-            size_hint=(1, 1),
-            pos_hint={"x": 0, "y": 0}
-        )
-
-        title = Label(
+        self.title_label = Label(
             text="Cosa mangiamo?",
             font_name="fonts/Pacifico-Regular.ttf",
             markup=True,
-            font_size=42,
-            size_hint_y=None,
-            height=100,
+            size_hint=(0.9, 0.10),
+            pos_hint={
+                "center_x": 0.5,
+                "center_y": 0.74
+            },
             color=(0.02, 0.35, 0.28, 1)
         )
 
-        button = RoundedButton(
+        self.choose_button = RoundedButton(
             text="Scegli per me",
-            font_size=30,
-            size_hint_y=None,
-            height=60,
+            size_hint=(0.80, None),
+            pos_hint={
+                "center_x": 0.5,
+                "center_y": 0.65
+            },
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1)
         )
 
         self.result = Label(
             text="",
-            font_size=40,
+            font_name="fonts/Pacifico-Regular.ttf",
             markup=True,
-            size_hint_y=None,
-            height=100,
+            size_hint=(0.9, 0.10),
+            pos_hint={
+                "center_x": 0.5,
+                "center_y": 0.51
+            },
             color=(0.02, 0.35, 0.28, 1)
         )
 
-        list_button = RoundedButton(
+        self.list_button = RoundedButton(
             text="Vedi lista cibi",
-            font_size=30,
-            size_hint_y=None,
-            height=60,
+            size_hint=(0.80, None),
+            pos_hint={
+                "center_x": 0.5,
+                "center_y": 0.37
+            },
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1)
         )
 
-        button.bind(on_press=self.choose_food)
-        list_button.bind(on_press=self.show_food_list)
+        self.choose_button.bind(on_press=self.choose_food)
+        self.list_button.bind(on_press=self.show_food_list)
 
-        layout.add_widget(Widget(size_hint_y=0.6))
+        root.add_widget(self.title_label)
+        root.add_widget(self.choose_button)
+        root.add_widget(self.result)
+        root.add_widget(self.list_button)
 
-        layout.add_widget(title)
-        layout.add_widget(button)
-        layout.add_widget(self.result)
-        layout.add_widget(Widget(size_hint_y=None, height=50))
-        layout.add_widget(list_button)
-
-        layout.add_widget(Widget(size_hint_y=1.4))
-
-        root.add_widget(layout)
+        Window.bind(size=self.update_layout)
+        Clock.schedule_once(self.update_layout, 0)
 
         return root
+
+    def update_layout(self, *args):
+        height = Window.height
+
+        button_height = clamp(height * 0.045, 28, 62)
+        button_font = clamp(height * 0.023, 15, 31)
+        title_font = clamp(height * 0.036, 23, 48)
+        result_font = clamp(height * 0.034, 21, 44)
+
+        self.choose_button.height = button_height
+        self.list_button.height = button_height
+
+        self.choose_button.font_size = button_font
+        self.list_button.font_size = button_font
+
+        self.title_label.font_size = title_font
+        self.result.font_size = result_font
 
     def load_food(self):
         return get_foods()
@@ -245,13 +265,20 @@ class FoodApp(App):
 
         with popup_layout.canvas.before:
             Color(0.70, 0.92, 0.88, 1)
-            rect = Rectangle(size=popup_layout.size, pos=popup_layout.pos)
+            rect = Rectangle(
+                size=popup_layout.size,
+                pos=popup_layout.pos
+            )
 
         def update_rect(instance, value):
             rect.size = instance.size
             rect.pos = instance.pos
 
-        popup_layout.bind(size=update_rect, pos=update_rect)
+        popup_layout.bind(
+            size=update_rect,
+            pos=update_rect
+        )
+
         add_popup_button.bind(on_press=add_food_from_popup)
         delete_button.bind(on_press=delete_food_from_popup)
 
