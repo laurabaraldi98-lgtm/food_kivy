@@ -20,6 +20,9 @@ import random
 if platform not in ("android", "ios"):
     Window.size = (360, 640)
 
+if platform == "android":
+    Window.softinput_mode = "below_target"
+
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
 
 
@@ -59,8 +62,7 @@ class FoodApp(App):
 
         background = Image(
             source="images/background.png",
-            allow_stretch=True,
-            keep_ratio=False,
+            fit_mode="cover",
             size_hint=(1, 1),
             pos_hint={"x": 0, "y": 0}
         )
@@ -81,7 +83,7 @@ class FoodApp(App):
 
         self.choose_button = RoundedButton(
             text="Scegli per me",
-            size_hint=(0.80, None),
+            size_hint=(0.74, None),
             pos_hint={
                 "center_x": 0.5,
                 "center_y": 0.65
@@ -104,7 +106,7 @@ class FoodApp(App):
 
         self.list_button = RoundedButton(
             text="Vedi lista cibi",
-            size_hint=(0.80, None),
+            size_hint=(0.74, None),
             pos_hint={
                 "center_x": 0.5,
                 "center_y": 0.37
@@ -129,10 +131,10 @@ class FoodApp(App):
     def update_layout(self, *args):
         height = Window.height
 
-        button_height = clamp(height * 0.045, 28, 62)
-        button_font = clamp(height * 0.023, 15, 31)
-        title_font = clamp(height * 0.036, 23, 48)
-        result_font = clamp(height * 0.034, 21, 44)
+        button_height = height * 0.058
+        button_font = height * 0.030
+        title_font = height * 0.046
+        result_font = height * 0.042
 
         self.choose_button.height = button_height
         self.list_button.height = button_height
@@ -315,11 +317,10 @@ class FoodApp(App):
         )
 
         def update_popup_layout(*args):
-            width = popup.width
             height = popup.height
 
-            control_height = clamp(height * 0.055, 34, 52)
-            status_height = clamp(height * 0.040, 24, 36)
+            control_height = height * 0.065
+            status_height = height * 0.045
 
             add_input.height = control_height
             add_popup_button.height = control_height
@@ -327,12 +328,12 @@ class FoodApp(App):
             delete_button.height = control_height
             status_label.height = status_height
 
-            label.font_size = clamp(height * 0.040, 20, 30)
+            label.font_size = height * 0.045
 
-            input_font = clamp(height * 0.033, 16, 24)
-            button_font = clamp(height * 0.033, 16, 24)
-            status_font = clamp(height * 0.028, 14, 20)
-            title_font = clamp(height * 0.040, 20, 30)
+            input_font = height * 0.038
+            button_font = height * 0.038
+            status_font = height * 0.030
+            title_font = height * 0.045
 
             add_input.font_size = input_font
             delete_input.font_size = input_font
@@ -343,7 +344,7 @@ class FoodApp(App):
             status_label.font_size = status_font
             popup.title_size = title_font
 
-            form_layout.spacing = clamp(height * 0.006, 3, 8)
+            form_layout.spacing = height * 0.006
 
             form_layout.height = (
                 control_height * 4
