@@ -11,6 +11,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 from kivy.utils import platform
+from kivy.metrics import dp, sp
 
 from supabase_client import get_foods, add_food, delete_food
 
@@ -76,7 +77,7 @@ class FoodApp(App):
             size_hint=(0.9, 0.10),
             pos_hint={
                 "center_x": 0.5,
-                "center_y": 0.74
+                "center_y": 0.79
             },
             color=(0.02, 0.35, 0.28, 1)
         )
@@ -129,21 +130,14 @@ class FoodApp(App):
         return root
 
     def update_layout(self, *args):
-        height = Window.height
+        self.choose_button.height = dp(52)
+        self.list_button.height = dp(52)
 
-        button_height = height * 0.058
-        button_font = height * 0.030
-        title_font = height * 0.046
-        result_font = height * 0.042
+        self.choose_button.font_size = sp(20)
+        self.list_button.font_size = sp(20)
 
-        self.choose_button.height = button_height
-        self.list_button.height = button_height
-
-        self.choose_button.font_size = button_font
-        self.list_button.font_size = button_font
-
-        self.title_label.font_size = title_font
-        self.result.font_size = result_font
+        self.title_label.font_size = sp(34)
+        self.result.font_size = sp(30)
 
     def load_food(self):
         return get_foods()
