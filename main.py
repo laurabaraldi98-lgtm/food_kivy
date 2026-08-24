@@ -8,6 +8,7 @@ from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 from kivy.utils import platform
@@ -22,7 +23,7 @@ if platform not in ("android", "ios"):
     Window.size = (360, 640)
 
 if platform == "android":
-    Window.softinput_mode = "resize"
+    Window.softinput_mode = "below_target"
 
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
 
@@ -153,8 +154,7 @@ class FoodApp(App):
 
         popup_layout = BoxLayout(
             orientation="vertical",
-            padding=(dp(18), dp(10), dp(18), dp(18)),
-            spacing=dp(10)
+            padding=(dp(18), dp(10), dp(18), dp(18))
         )
 
         with popup_layout.canvas.before:
@@ -174,25 +174,58 @@ class FoodApp(App):
             pos=update_rect
         )
 
+        content_scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            do_scroll_y=True
+        )
+
+        content_column = BoxLayout(
+            orientation="vertical",
+            spacing=dp(6),
+            padding=(0, dp(8), 0, dp(20)),
+            size_hint_y=None
+        )
+
+        content_column.bind(
+            minimum_height=content_column.setter("height")
+        )
+
         label = Label(
             text=food_text,
             font_size=sp(22),
             color=(0.02, 0.35, 0.28, 1),
-            size_hint=(1, None),
+            size_hint_y=None,
             halign="center",
             valign="top"
         )
 
-        def update_label_height(instance, size):
-            instance.height = size[1]
+        def update_label_layout(instance, size):
+            instance.text_size = (
+                content_scroll.width - dp(20),
+                None
+            )
+            instance.height = instance.texture_size[1]
 
-        label.bind(texture_size=update_label_height)
-
-        scroll = ScrollView(
-            size_hint=(1, 1)
+        label.bind(
+            texture_size=update_label_layout
         )
 
-        scroll.add_widget(label)
+        content_scroll.bind(
+            width=lambda *args: update_label_layout(
+                label,
+                label.texture_size
+            )
+        )
+
+        content_column.add_widget(label)
+
+        middle_space = Widget(
+            size_hint_y=None,
+            height=dp(220)
+        )
+
+        content_column.add_widget(middle_space)
 
         control_height = dp(42)
         status_height = dp(24)
@@ -201,7 +234,13 @@ class FoodApp(App):
         form_layout = BoxLayout(
             orientation="vertical",
             spacing=form_spacing,
-            size_hint=(1, None)
+            size_hint_y=None
+        )
+
+        form_layout.height = (
+            control_height * 4
+            + status_height
+            + form_spacing * 4
         )
 
         add_input = TextInput(
@@ -250,17 +289,39 @@ class FoodApp(App):
             height=status_height
         )
 
-        form_layout.height = (
-            control_height * 4
-            + status_height
-            + form_spacing * 4
-        )
-
         form_layout.add_widget(add_input)
         form_layout.add_widget(add_popup_button)
         form_layout.add_widget(delete_input)
         form_layout.add_widget(delete_button)
         form_layout.add_widget(status_label)
+
+        content_column.add_widget(form_layout)
+
+        bottom_space = Widget(
+            size_hint_y=None,
+            height=dp(80)
+        )
+
+        content_column.add_widget(bottom_space)
+
+        content_scroll.add_widget(content_column)
+        popup_layout.add_widget(content_scroll)
+
+        def scroll_to_input(instance, focused):
+            if not focused:
+                return
+
+            Clock.schedule_once(
+                lambda dt: content_scroll.scroll_to(
+                    instance,
+                    padding=dp(20),
+                    animate=True
+                ),
+                0.2
+            )
+
+        add_input.bind(focus=scroll_to_input)
+        delete_input.bind(focus=scroll_to_input)
 
         def clear_status(dt):
             status_label.text = ""
@@ -276,11 +337,14 @@ class FoodApp(App):
 
                 if new_food not in self.food:
                     add_food(new_food)
+
                     self.food.append(new_food)
                     refresh_list()
                     status_label.text = f"Aggiunto: {new_food}"
                 else:
-                    status_label.text = f"{new_food} è già nella lista"
+                    status_label.text = (
+                        f"{new_food} è già nella lista"
+                    )
 
                 Clock.schedule_once(clear_status, 3)
                 add_input.text = ""
@@ -296,9 +360,12 @@ class FoodApp(App):
 
                 if food_to_delete in self.food:
                     delete_food(food_to_delete)
+
                     self.food.remove(food_to_delete)
                     refresh_list()
-                    status_label.text = f"Eliminato: {food_to_delete}"
+                    status_label.text = (
+                        f"Eliminato: {food_to_delete}"
+                    )
                 else:
                     status_label.text = (
                         f"{food_to_delete} non è nella lista"
@@ -314,9 +381,6 @@ class FoodApp(App):
         delete_button.bind(
             on_press=delete_food_from_popup
         )
-
-        popup_layout.add_widget(scroll)
-        popup_layout.add_widget(form_layout)
 
         popup = Popup(
             title="Cibi disponibili",
