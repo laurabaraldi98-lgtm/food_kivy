@@ -11,6 +11,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 from kivy.utils import platform
+from kivy.metrics import dp, sp
 
 from supabase_client import get_foods, add_food, delete_food
 
@@ -21,13 +22,9 @@ if platform not in ("android", "ios"):
     Window.size = (360, 640)
 
 if platform == "android":
-    Window.softinput_mode = "below_target"
+    Window.softinput_mode = "resize"
 
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
-
-
-def clamp(value, minimum, maximum):
-    return max(minimum, min(value, maximum))
 
 
 class RoundedButton(Button):
@@ -43,11 +40,13 @@ class RoundedButton(Button):
             self.rounded_rect = RoundedRectangle(
                 size=self.size,
                 pos=self.pos,
-                radius=[18]
+                radius=[dp(18)]
             )
 
-        self.bind(pos=self.update_rounded_rect)
-        self.bind(size=self.update_rounded_rect)
+        self.bind(
+            pos=self.update_rounded_rect,
+            size=self.update_rounded_rect
+        )
 
     def update_rounded_rect(self, instance, value):
         self.rounded_rect.pos = self.pos
@@ -62,8 +61,7 @@ class FoodApp(App):
 
         background = Image(
             source="images/background.png",
-            allow_stretch=True,
-            keep_ratio=False,
+            fit_mode="cover",
             size_hint=(1, 1),
             pos_hint={"x": 0, "y": 0}
         )
@@ -77,14 +75,14 @@ class FoodApp(App):
             size_hint=(0.9, 0.10),
             pos_hint={
                 "center_x": 0.5,
-                "center_y": 0.74
+                "center_y": 0.79
             },
             color=(0.02, 0.35, 0.28, 1)
         )
 
         self.choose_button = RoundedButton(
             text="Scegli per me",
-            size_hint=(0.80, None),
+            size_hint=(0.74, None),
             pos_hint={
                 "center_x": 0.5,
                 "center_y": 0.65
@@ -107,7 +105,7 @@ class FoodApp(App):
 
         self.list_button = RoundedButton(
             text="Vedi lista cibi",
-            size_hint=(0.80, None),
+            size_hint=(0.74, None),
             pos_hint={
                 "center_x": 0.5,
                 "center_y": 0.37
@@ -130,21 +128,14 @@ class FoodApp(App):
         return root
 
     def update_layout(self, *args):
-        height = Window.height
+        self.choose_button.height = dp(52)
+        self.list_button.height = dp(52)
 
-        button_height = clamp(height * 0.045, 28, 62)
-        button_font = clamp(height * 0.023, 15, 31)
-        title_font = clamp(height * 0.036, 23, 48)
-        result_font = clamp(height * 0.034, 21, 44)
+        self.choose_button.font_size = sp(20)
+        self.list_button.font_size = sp(20)
 
-        self.choose_button.height = button_height
-        self.list_button.height = button_height
-
-        self.choose_button.font_size = button_font
-        self.list_button.font_size = button_font
-
-        self.title_label.font_size = title_font
-        self.result.font_size = result_font
+        self.title_label.font_size = sp(34)
+        self.result.font_size = sp(30)
 
     def load_food(self):
         return get_foods()
@@ -164,6 +155,7 @@ class FoodApp(App):
 
         with popup_layout.canvas.before:
             Color(0.70, 0.92, 0.88, 1)
+
             rect = Rectangle(
                 size=popup_layout.size,
                 pos=popup_layout.pos
@@ -180,12 +172,13 @@ class FoodApp(App):
 
         label = Label(
             text=food_text,
+            font_size=sp(22),
             color=(0.02, 0.35, 0.28, 1),
             size_hint=(1, None)
         )
 
-        def update_label_height(label, size):
-            label.height = size[1]
+        def update_label_height(instance, size):
+            instance.height = size[1]
 
         label.bind(texture_size=update_label_height)
 
@@ -199,10 +192,14 @@ class FoodApp(App):
 
         scroll.add_widget(label)
 
+        control_height = dp(48)
+        status_height = dp(30)
+        form_spacing = dp(6)
+
         form_layout = BoxLayout(
             orientation="vertical",
-            spacing=4,
-            size_hint=(0.88, 0.25),
+            spacing=form_spacing,
+            size_hint=(0.88, None),
             pos_hint={
                 "center_x": 0.5,
                 "y": 0.06
@@ -212,12 +209,16 @@ class FoodApp(App):
         add_input = TextInput(
             hint_text="Scrivi cibo da aggiungere",
             multiline=False,
-            size_hint_y=None
+            font_size=sp(18),
+            size_hint_y=None,
+            height=control_height
         )
 
         add_popup_button = Button(
             text="Aggiungi cibo",
+            font_size=sp(18),
             size_hint_y=None,
+            height=control_height,
             background_normal="",
             background_color=(0.22, 0.68, 0.48, 1),
             color=(1, 1, 1, 1)
@@ -226,12 +227,16 @@ class FoodApp(App):
         delete_input = TextInput(
             hint_text="Scrivi cibo da eliminare",
             multiline=False,
-            size_hint_y=None
+            font_size=sp(18),
+            size_hint_y=None,
+            height=control_height
         )
 
         delete_button = Button(
             text="Elimina cibo",
+            font_size=sp(18),
             size_hint_y=None,
+            height=control_height,
             background_normal="",
             background_color=(0.55, 0.20, 0.20, 1),
             color=(1, 1, 1, 1)
@@ -239,8 +244,16 @@ class FoodApp(App):
 
         status_label = Label(
             text="",
+            font_size=sp(15),
             color=(0.02, 0.35, 0.28, 1),
-            size_hint_y=None
+            size_hint_y=None,
+            height=status_height
+        )
+
+        form_layout.height = (
+            control_height * 4
+            + status_height
+            + form_spacing * 4
         )
 
         form_layout.add_widget(add_input)
@@ -309,6 +322,7 @@ class FoodApp(App):
 
         popup = Popup(
             title="Cibi disponibili",
+            title_size=sp(22),
             content=popup_layout,
             size_hint=(0.90, 0.90),
             background="",
@@ -317,48 +331,7 @@ class FoodApp(App):
             separator_color=(0.10, 0.55, 0.45, 1)
         )
 
-        def update_popup_layout(*args):
-            width = popup.width
-            height = popup.height
-
-            control_height = clamp(height * 0.055, 34, 52)
-            status_height = clamp(height * 0.040, 24, 36)
-
-            add_input.height = control_height
-            add_popup_button.height = control_height
-            delete_input.height = control_height
-            delete_button.height = control_height
-            status_label.height = status_height
-
-            label.font_size = clamp(height * 0.040, 20, 30)
-
-            input_font = clamp(height * 0.033, 16, 24)
-            button_font = clamp(height * 0.033, 16, 24)
-            status_font = clamp(height * 0.028, 14, 20)
-            title_font = clamp(height * 0.040, 20, 30)
-
-            add_input.font_size = input_font
-            delete_input.font_size = input_font
-
-            add_popup_button.font_size = button_font
-            delete_button.font_size = button_font
-
-            status_label.font_size = status_font
-            popup.title_size = title_font
-
-            form_layout.spacing = clamp(height * 0.006, 3, 8)
-
-            form_layout.height = (
-                control_height * 4
-                + status_height
-                + form_layout.spacing * 4
-            )
-
-        popup.bind(size=update_popup_layout)
-
         popup.open()
-
-        Clock.schedule_once(update_popup_layout, 0)
 
 
 FoodApp().run()
