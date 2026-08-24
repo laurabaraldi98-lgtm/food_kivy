@@ -151,7 +151,11 @@ class FoodApp(App):
     def show_food_list(self, instance):
         food_text = "\n".join(self.food)
 
-        popup_layout = FloatLayout()
+        popup_layout = BoxLayout(
+            orientation="vertical",
+            padding=(dp(18), dp(10), dp(18), dp(18)),
+            spacing=dp(10)
+        )
 
         with popup_layout.canvas.before:
             Color(0.70, 0.92, 0.88, 1)
@@ -174,7 +178,9 @@ class FoodApp(App):
             text=food_text,
             font_size=sp(22),
             color=(0.02, 0.35, 0.28, 1),
-            size_hint=(1, None)
+            size_hint=(1, None),
+            halign="center",
+            valign="top"
         )
 
         def update_label_height(instance, size):
@@ -183,35 +189,28 @@ class FoodApp(App):
         label.bind(texture_size=update_label_height)
 
         scroll = ScrollView(
-            size_hint=(0.90, 0.25),
-            pos_hint={
-                "center_x": 0.5,
-                "top": 0.97
-            }
+            size_hint=(1, 1)
         )
 
         scroll.add_widget(label)
 
-        control_height = dp(48)
-        status_height = dp(30)
-        form_spacing = dp(6)
+        control_height = dp(42)
+        status_height = dp(24)
+        form_spacing = dp(5)
 
         form_layout = BoxLayout(
             orientation="vertical",
             spacing=form_spacing,
-            size_hint=(0.88, None),
-            pos_hint={
-                "center_x": 0.5,
-                "y": 0.06
-            }
+            size_hint=(1, None)
         )
 
         add_input = TextInput(
             hint_text="Scrivi cibo da aggiungere",
             multiline=False,
-            font_size=sp(18),
+            font_size=sp(17),
             size_hint_y=None,
-            height=control_height
+            height=control_height,
+            padding=(dp(8), dp(8))
         )
 
         add_popup_button = Button(
@@ -227,9 +226,10 @@ class FoodApp(App):
         delete_input = TextInput(
             hint_text="Scrivi cibo da eliminare",
             multiline=False,
-            font_size=sp(18),
+            font_size=sp(17),
             size_hint_y=None,
-            height=control_height
+            height=control_height,
+            padding=(dp(8), dp(8))
         )
 
         delete_button = Button(
@@ -244,7 +244,7 @@ class FoodApp(App):
 
         status_label = Label(
             text="",
-            font_size=sp(15),
+            font_size=sp(14),
             color=(0.02, 0.35, 0.28, 1),
             size_hint_y=None,
             height=status_height
@@ -276,7 +276,6 @@ class FoodApp(App):
 
                 if new_food not in self.food:
                     add_food(new_food)
-
                     self.food.append(new_food)
                     refresh_list()
                     status_label.text = f"Aggiunto: {new_food}"
@@ -297,7 +296,6 @@ class FoodApp(App):
 
                 if food_to_delete in self.food:
                     delete_food(food_to_delete)
-
                     self.food.remove(food_to_delete)
                     refresh_list()
                     status_label.text = f"Eliminato: {food_to_delete}"
