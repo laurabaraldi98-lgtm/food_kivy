@@ -28,8 +28,65 @@ if platform == "android":
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
 
 
+class SafeBackground(Image):
+    def __init__(self, max_crop=0.15, **kwargs):
+        super().__init__(
+            size_hint=(None, None),
+            fit_mode="fill",
+            **kwargs
+        )
+
+        self.max_crop = max_crop
+
+        Window.bind(size=self._resize)
+        self.bind(texture=self._resize)
+
+        Clock.schedule_once(self._resize, 0)
+
+    def _resize(self, *args):
+        if not self.texture:
+            return
+
+        image_width, image_height = self.texture.size
+        window_width, window_height = Window.size
+
+        if image_width == 0 or image_height == 0:
+            return
+
+        contain_scale = min(
+            window_width / image_width,
+            window_height / image_height
+        )
+
+        cover_scale = max(
+            window_width / image_width,
+            window_height / image_height
+        )
+
+        limited_scale = contain_scale * (1 + self.max_crop)
+
+        scale = min(
+            cover_scale,
+            limited_scale
+        )
+
+        self.size = (
+            image_width * scale,
+            image_height * scale
+        )
+
+        self.pos = (
+            (window_width - self.width) / 2,
+            (window_height - self.height) / 2
+        )
+
+
 class RoundedButton(Button):
-    def __init__(self, my_color=(0.10, 0.55, 0.45, 1), **kwargs):
+    def __init__(
+        self,
+        my_color=(0.10, 0.55, 0.45, 1),
+        **kwargs
+    ):
         super().__init__(**kwargs)
 
         self.my_color = my_color
@@ -38,6 +95,7 @@ class RoundedButton(Button):
 
         with self.canvas.before:
             self.button_color = Color(*self.my_color)
+
             self.rounded_rect = RoundedRectangle(
                 size=self.size,
                 pos=self.pos,
@@ -60,14 +118,12 @@ class FoodApp(App):
 
         root = FloatLayout()
 
-        background = Image(
+        self.background = SafeBackground(
             source="images/background.png",
-            fit_mode="cover",
-            size_hint=(1, 1),
-            pos_hint={"x": 0, "y": 0}
+            max_crop=0.15
         )
 
-        root.add_widget(background)
+        root.add_widget(self.background)
 
         self.title_label = Label(
             text="Cosa mangiamo?",
@@ -115,8 +171,13 @@ class FoodApp(App):
             color=(1, 1, 1, 1)
         )
 
-        self.choose_button.bind(on_press=self.choose_food)
-        self.list_button.bind(on_press=self.show_food_list)
+        self.choose_button.bind(
+            on_press=self.choose_food
+        )
+
+        self.list_button.bind(
+            on_press=self.show_food_list
+        )
 
         root.add_widget(self.title_label)
         root.add_widget(self.choose_button)
@@ -143,10 +204,13 @@ class FoodApp(App):
 
     def choose_food(self, instance):
         if not self.food:
-            self.result.text = "[b]Aggiungi prima qualche cibo[/b]"
+            self.result.text = (
+                "[b]Aggiungi prima qualche cibo[/b]"
+            )
             return
 
         choice = random.choice(self.food)
+
         self.result.text = f"[b]{choice}[/b]"
 
     def show_food_list(self, instance):
@@ -154,11 +218,21 @@ class FoodApp(App):
 
         popup_layout = BoxLayout(
             orientation="vertical",
-            padding=(dp(18), dp(10), dp(18), dp(18))
+            padding=(
+                dp(18),
+                dp(10),
+                dp(18),
+                dp(18)
+            )
         )
 
         with popup_layout.canvas.before:
-            Color(0.70, 0.92, 0.88, 1)
+            Color(
+                0.70,
+                0.92,
+                0.88,
+                1
+            )
 
             rect = Rectangle(
                 size=popup_layout.size,
@@ -183,12 +257,19 @@ class FoodApp(App):
         content_column = BoxLayout(
             orientation="vertical",
             spacing=dp(6),
-            padding=(0, dp(8), 0, dp(20)),
+            padding=(
+                0,
+                dp(8),
+                0,
+                dp(20)
+            ),
             size_hint_y=None
         )
 
         content_column.bind(
-            minimum_height=content_column.setter("height")
+            minimum_height=content_column.setter(
+                "height"
+            )
         )
 
         label = Label(
@@ -196,7 +277,7 @@ class FoodApp(App):
             font_size=sp(22),
             color=(0.02, 0.35, 0.28, 1),
             size_hint_y=None,
-            halign="center",
+            halign="left",
             valign="top"
         )
 
@@ -205,7 +286,10 @@ class FoodApp(App):
                 content_scroll.width - dp(20),
                 None
             )
-            instance.height = instance.texture_size[1]
+
+            instance.height = (
+                instance.texture_size[1]
+            )
 
         label.bind(
             texture_size=update_label_layout
@@ -222,10 +306,12 @@ class FoodApp(App):
 
         middle_space = Widget(
             size_hint_y=None,
-            height=dp(220)
+            height=dp(60)
         )
 
-        content_column.add_widget(middle_space)
+        content_column.add_widget(
+            middle_space
+        )
 
         control_height = dp(42)
         status_height = dp(24)
@@ -249,7 +335,10 @@ class FoodApp(App):
             font_size=sp(17),
             size_hint_y=None,
             height=control_height,
-            padding=(dp(8), dp(8))
+            padding=(
+                dp(8),
+                dp(8)
+            )
         )
 
         add_popup_button = Button(
@@ -258,7 +347,12 @@ class FoodApp(App):
             size_hint_y=None,
             height=control_height,
             background_normal="",
-            background_color=(0.22, 0.68, 0.48, 1),
+            background_color=(
+                0.22,
+                0.68,
+                0.48,
+                1
+            ),
             color=(1, 1, 1, 1)
         )
 
@@ -268,7 +362,10 @@ class FoodApp(App):
             font_size=sp(17),
             size_hint_y=None,
             height=control_height,
-            padding=(dp(8), dp(8))
+            padding=(
+                dp(8),
+                dp(8)
+            )
         )
 
         delete_button = Button(
@@ -277,7 +374,12 @@ class FoodApp(App):
             size_hint_y=None,
             height=control_height,
             background_normal="",
-            background_color=(0.55, 0.20, 0.20, 1),
+            background_color=(
+                0.55,
+                0.20,
+                0.20,
+                1
+            ),
             color=(1, 1, 1, 1)
         )
 
@@ -289,25 +391,51 @@ class FoodApp(App):
             height=status_height
         )
 
-        form_layout.add_widget(add_input)
-        form_layout.add_widget(add_popup_button)
-        form_layout.add_widget(delete_input)
-        form_layout.add_widget(delete_button)
-        form_layout.add_widget(status_label)
+        form_layout.add_widget(
+            add_input
+        )
 
-        content_column.add_widget(form_layout)
+        form_layout.add_widget(
+            add_popup_button
+        )
+
+        form_layout.add_widget(
+            delete_input
+        )
+
+        form_layout.add_widget(
+            delete_button
+        )
+
+        form_layout.add_widget(
+            status_label
+        )
+
+        content_column.add_widget(
+            form_layout
+        )
 
         bottom_space = Widget(
             size_hint_y=None,
             height=dp(80)
         )
 
-        content_column.add_widget(bottom_space)
+        content_column.add_widget(
+            bottom_space
+        )
 
-        content_scroll.add_widget(content_column)
-        popup_layout.add_widget(content_scroll)
+        content_scroll.add_widget(
+            content_column
+        )
 
-        def scroll_to_input(instance, focused):
+        popup_layout.add_widget(
+            content_scroll
+        )
+
+        def scroll_to_input(
+            instance,
+            focused
+        ):
             if not focused:
                 return
 
@@ -320,37 +448,60 @@ class FoodApp(App):
                 0.2
             )
 
-        add_input.bind(focus=scroll_to_input)
-        delete_input.bind(focus=scroll_to_input)
+        add_input.bind(
+            focus=scroll_to_input
+        )
+
+        delete_input.bind(
+            focus=scroll_to_input
+        )
 
         def clear_status(dt):
             status_label.text = ""
 
         def refresh_list():
-            label.text = "\n".join(self.food)
+            label.text = "\n".join(
+                self.food
+            )
 
         def add_food_from_popup(instance):
             new_food = add_input.text.strip()
 
             if new_food:
-                new_food = new_food[0].upper() + new_food[1:]
+                new_food = (
+                    new_food[0].upper()
+                    + new_food[1:]
+                )
 
                 if new_food not in self.food:
                     add_food(new_food)
 
-                    self.food.append(new_food)
+                    self.food.append(
+                        new_food
+                    )
+
                     refresh_list()
-                    status_label.text = f"Aggiunto: {new_food}"
+
+                    status_label.text = (
+                        f"Aggiunto: {new_food}"
+                    )
+
                 else:
                     status_label.text = (
                         f"{new_food} è già nella lista"
                     )
 
-                Clock.schedule_once(clear_status, 3)
+                Clock.schedule_once(
+                    clear_status,
+                    3
+                )
+
                 add_input.text = ""
 
         def delete_food_from_popup(instance):
-            food_to_delete = delete_input.text.strip()
+            food_to_delete = (
+                delete_input.text.strip()
+            )
 
             if food_to_delete:
                 food_to_delete = (
@@ -359,19 +510,32 @@ class FoodApp(App):
                 )
 
                 if food_to_delete in self.food:
-                    delete_food(food_to_delete)
-
-                    self.food.remove(food_to_delete)
-                    refresh_list()
-                    status_label.text = (
-                        f"Eliminato: {food_to_delete}"
+                    delete_food(
+                        food_to_delete
                     )
+
+                    self.food.remove(
+                        food_to_delete
+                    )
+
+                    refresh_list()
+
+                    status_label.text = (
+                        f"Eliminato: "
+                        f"{food_to_delete}"
+                    )
+
                 else:
                     status_label.text = (
-                        f"{food_to_delete} non è nella lista"
+                        f"{food_to_delete} "
+                        f"non è nella lista"
                     )
 
-                Clock.schedule_once(clear_status, 3)
+                Clock.schedule_once(
+                    clear_status,
+                    3
+                )
+
                 delete_input.text = ""
 
         add_popup_button.bind(
@@ -386,11 +550,26 @@ class FoodApp(App):
             title="Cibi disponibili",
             title_size=sp(22),
             content=popup_layout,
-            size_hint=(0.90, 0.90),
+            size_hint=(0.84, 0.84),
             background="",
-            background_color=(0.70, 0.92, 0.88, 1),
-            title_color=(0.02, 0.35, 0.28, 1),
-            separator_color=(0.10, 0.55, 0.45, 1)
+            background_color=(
+                0.70,
+                0.92,
+                0.88,
+                1
+            ),
+            title_color=(
+                0.02,
+                0.35,
+                0.28,
+                1
+            ),
+            separator_color=(
+                0.10,
+                0.55,
+                0.45,
+                1
+            )
         )
 
         popup.open()
