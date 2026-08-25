@@ -27,58 +27,7 @@ if platform == "android":
 
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
 
-
-class SafeBackground(Image):
-    def __init__(self, max_crop=0.15, **kwargs):
-        super().__init__(
-            size_hint=(None, None),
-            fit_mode="fill",
-            **kwargs
-        )
-
-        self.max_crop = max_crop
-
-        Window.bind(size=self._resize)
-        self.bind(texture=self._resize)
-
-        Clock.schedule_once(self._resize, 0)
-
-    def _resize(self, *args):
-        if not self.texture:
-            return
-
-        image_width, image_height = self.texture.size
-        window_width, window_height = Window.size
-
-        if image_width == 0 or image_height == 0:
-            return
-
-        contain_scale = min(
-            window_width / image_width,
-            window_height / image_height
-        )
-
-        cover_scale = max(
-            window_width / image_width,
-            window_height / image_height
-        )
-
-        limited_scale = contain_scale * (1 + self.max_crop)
-
-        scale = min(
-            cover_scale,
-            limited_scale
-        )
-
-        self.size = (
-            image_width * scale,
-            image_height * scale
-        )
-
-        self.pos = (
-            (window_width - self.width) / 2,
-            (window_height - self.height) / 2
-        )
+Window.set_icon("images/icon.png")
 
 
 class RoundedButton(Button):
@@ -118,12 +67,21 @@ class FoodApp(App):
 
         root = FloatLayout()
 
-        self.background = SafeBackground(
-            source="images/background.png",
-            max_crop=0.15
+        ratio = Window.width / Window.height
+
+        if ratio < 0.48:
+            background_source = "images/background_tall.png"
+        else:
+            background_source = "images/background.png"
+
+        background = Image(
+            source=background_source,
+            fit_mode="cover",
+            size_hint=(1, 1),
+            pos_hint={"x": 0, "y": 0}
         )
 
-        root.add_widget(self.background)
+        root.add_widget(background)
 
         self.title_label = Label(
             text="Cosa mangiamo?",
@@ -222,7 +180,7 @@ class FoodApp(App):
                 dp(18),
                 dp(10),
                 dp(18),
-                dp(18)
+                dp(12)
             )
         )
 
@@ -256,12 +214,12 @@ class FoodApp(App):
 
         content_column = BoxLayout(
             orientation="vertical",
-            spacing=dp(6),
+            spacing=dp(4),
             padding=(
                 0,
                 dp(8),
                 0,
-                dp(20)
+                dp(8)
             ),
             size_hint_y=None
         )
@@ -306,16 +264,16 @@ class FoodApp(App):
 
         middle_space = Widget(
             size_hint_y=None,
-            height=dp(60)
+            height=dp(8)
         )
 
         content_column.add_widget(
             middle_space
         )
 
-        control_height = dp(42)
-        status_height = dp(24)
-        form_spacing = dp(5)
+        control_height = dp(36)
+        status_height = dp(20)
+        form_spacing = dp(4)
 
         form_layout = BoxLayout(
             orientation="vertical",
@@ -332,18 +290,18 @@ class FoodApp(App):
         add_input = TextInput(
             hint_text="Scrivi cibo da aggiungere",
             multiline=False,
-            font_size=sp(17),
+            font_size=sp(15),
             size_hint_y=None,
             height=control_height,
             padding=(
-                dp(8),
-                dp(8)
+                dp(6),
+                dp(6)
             )
         )
 
         add_popup_button = Button(
             text="Aggiungi cibo",
-            font_size=sp(18),
+            font_size=sp(16),
             size_hint_y=None,
             height=control_height,
             background_normal="",
@@ -359,18 +317,18 @@ class FoodApp(App):
         delete_input = TextInput(
             hint_text="Scrivi cibo da eliminare",
             multiline=False,
-            font_size=sp(17),
+            font_size=sp(15),
             size_hint_y=None,
             height=control_height,
             padding=(
-                dp(8),
-                dp(8)
+                dp(6),
+                dp(6)
             )
         )
 
         delete_button = Button(
             text="Elimina cibo",
-            font_size=sp(18),
+            font_size=sp(16),
             size_hint_y=None,
             height=control_height,
             background_normal="",
@@ -385,7 +343,7 @@ class FoodApp(App):
 
         status_label = Label(
             text="",
-            font_size=sp(14),
+            font_size=sp(13),
             color=(0.02, 0.35, 0.28, 1),
             size_hint_y=None,
             height=status_height
@@ -417,7 +375,7 @@ class FoodApp(App):
 
         bottom_space = Widget(
             size_hint_y=None,
-            height=dp(80)
+            height=dp(16)
         )
 
         content_column.add_widget(
@@ -442,7 +400,7 @@ class FoodApp(App):
             Clock.schedule_once(
                 lambda dt: content_scroll.scroll_to(
                     instance,
-                    padding=dp(20),
+                    padding=dp(16),
                     animate=True
                 ),
                 0.2

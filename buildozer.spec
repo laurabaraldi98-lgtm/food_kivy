@@ -14,6 +14,8 @@ requirements = python3,kivy,requests,certifi,urllib3,idna,charset_normalizer
 orientation = portrait
 fullscreen = 0
 
+icon.filename = images/icon.png
+
 android.permissions = INTERNET
 
 android.api = 35
