@@ -2,3 +2,6 @@ config.py
 test_supabase.py
 __pycache__/
 *.pyc
+.pytest_cache/
+.coverage
+htmlcov/
