@@ -13,6 +13,9 @@ from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 from kivy.utils import platform
 from kivy.metrics import dp, sp
+from kivy.uix.screenmanager import Screen, ScreenManager
+
+from auth_screen import AuthScreen
 
 from supabase_client import get_foods, add_food, delete_food
 
@@ -145,7 +148,21 @@ class FoodApp(App):
         Window.bind(size=self.update_layout)
         Clock.schedule_once(self.update_layout, 0)
 
-        return root
+        # Inserisce l'interfaccia esistente dentro la schermata dei cibi
+        food_screen = Screen(name="food")
+        food_screen.add_widget(root)
+
+        # Gestisce il passaggio tra autenticazione e lista dei cibi
+        manager = ScreenManager()
+        manager.add_widget(
+            AuthScreen(name="auth")
+        )
+        manager.add_widget(food_screen)
+
+        # Temporaneamente mostra sempre il login all'avvio
+        manager.current = "auth"
+
+        return manager
 
     def update_layout(self, *args):
         self.choose_button.height = dp(52)
