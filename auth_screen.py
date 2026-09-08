@@ -187,9 +187,3 @@ class AuthScreen(Screen):
         self.status_label.text = (
             "Controlla la tua email per confermare l'account"
         )
-
-    def handle_sign_in(self, instance):
-        self.status_label.text = ""
-
-    def handle_sign_up(self, instance):
-        self.status_label.text = ""
