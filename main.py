@@ -9,13 +9,15 @@ from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
-from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Rectangle
 from kivy.clock import Clock
 from kivy.utils import platform
 from kivy.metrics import dp, sp
 from kivy.uix.screenmanager import Screen, ScreenManager
+from ui_components import RoundedButton
 
 from auth_screen import AuthScreen
+from signup_screen import SignUpScreen
 
 from supabase_client import get_foods, add_food, delete_food
 
@@ -31,37 +33,6 @@ if platform == "android":
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
 
 Window.set_icon("images/icon.png")
-
-
-class RoundedButton(Button):
-    def __init__(
-        self,
-        my_color=(0.10, 0.55, 0.45, 1),
-        **kwargs
-    ):
-        super().__init__(**kwargs)
-
-        self.my_color = my_color
-        self.background_normal = ""
-        self.background_color = (0, 0, 0, 0)
-
-        with self.canvas.before:
-            self.button_color = Color(*self.my_color)
-
-            self.rounded_rect = RoundedRectangle(
-                size=self.size,
-                pos=self.pos,
-                radius=[dp(18)]
-            )
-
-        self.bind(
-            pos=self.update_rounded_rect,
-            size=self.update_rounded_rect
-        )
-
-    def update_rounded_rect(self, instance, value):
-        self.rounded_rect.pos = self.pos
-        self.rounded_rect.size = self.size
 
 
 class FoodApp(App):
@@ -152,10 +123,13 @@ class FoodApp(App):
         food_screen = Screen(name="food")
         food_screen.add_widget(root)
 
-        # Gestisce il passaggio tra autenticazione e lista dei cibi
+        # Gestisce il passaggio tra accesso, registrazione e lista dei cibi
         manager = ScreenManager()
         manager.add_widget(
             AuthScreen(name="auth")
+        )
+        manager.add_widget(
+            SignUpScreen(name="signup")
         )
         manager.add_widget(food_screen)
 

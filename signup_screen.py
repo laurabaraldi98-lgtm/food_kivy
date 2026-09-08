@@ -8,11 +8,11 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.textinput import TextInput
 from requests import RequestException
 
-from auth_client import sign_in
+from auth_client import sign_up
 from ui_components import RoundedButton
 
 
-class AuthScreen(Screen):
+class SignUpScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -36,7 +36,7 @@ class AuthScreen(Screen):
         )
 
         title = Label(
-            text="Cosa mangiamo?",
+            text="Crea account",
             font_name="fonts/Pacifico-Regular.ttf",
             font_size=sp(34),
             color=(0.02, 0.35, 0.28, 1),
@@ -63,29 +63,29 @@ class AuthScreen(Screen):
             padding=(dp(10), dp(10)),
         )
 
-        sign_in_button = RoundedButton(
-            text="Accedi",
+        create_account_button = RoundedButton(
+            text="Crea account",
             font_size=sp(20),
             size_hint_y=None,
             height=dp(52),
-            my_color=(0.10, 0.55, 0.45, 1),
+            my_color=(0.22, 0.68, 0.48, 1),
             color=(1, 1, 1, 1),
         )
 
-        account_prompt = Label(
-            text="Non hai ancora un account?",
+        login_prompt = Label(
+            text="Hai già un account?",
             font_size=sp(14),
             color=(0.02, 0.35, 0.28, 1),
             size_hint_y=None,
             height=dp(26),
         )
 
-        sign_up_button = RoundedButton(
-            text="Creane uno",
+        sign_in_button = RoundedButton(
+            text="Accedi",
             font_size=sp(20),
             size_hint_y=None,
             height=dp(52),
-            my_color=(0.22, 0.68, 0.48, 1),
+            my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
 
@@ -97,16 +97,20 @@ class AuthScreen(Screen):
             height=dp(34),
         )
 
-        sign_up_button.bind(
-            on_press=self.open_sign_up
+        create_account_button.bind(
+            on_press=self.handle_sign_up
+        )
+
+        sign_in_button.bind(
+            on_press=self.open_sign_in
         )
 
         form.add_widget(title)
         form.add_widget(self.email_input)
         form.add_widget(self.password_input)
+        form.add_widget(create_account_button)
+        form.add_widget(login_prompt)
         form.add_widget(sign_in_button)
-        form.add_widget(account_prompt)
-        form.add_widget(sign_up_button)
         form.add_widget(self.status_label)
 
         self.add_widget(form)
@@ -131,7 +135,7 @@ class AuthScreen(Screen):
 
         return email, password
 
-    def handle_sign_in(self, instance):
+    def handle_sign_up(self, instance):
         credentials = self.get_credentials()
 
         if credentials is None:
@@ -139,20 +143,36 @@ class AuthScreen(Screen):
 
         email, password = credentials
 
-        try:
-            session = sign_in(email, password)
-        except RequestException:
+        if len(password) < 6:
             self.status_label.text = (
-                "Email o password non corretti"
+                "La password deve avere almeno 6 caratteri"
             )
             return
 
-        app = App.get_running_app()
-        app.session = session
+        try:
+            result = sign_up(email, password)
+        except RequestException:
+            self.status_label.text = (
+                "Impossibile creare l'account"
+            )
+            return
 
-        self.status_label.text = ""
-        self.manager.current = "food"
+        if result.get("access_token"):
+            app = App.get_running_app()
+            app.session = result
+            self.manager.current = "food"
+            return
 
-    def open_sign_up(self, instance):
+        self.status_label.color = (
+            0.02,
+            0.35,
+            0.28,
+            1,
+        )
+        self.status_label.text = (
+            "Controlla la tua email per confermare l'account"
+        )
+
+    def open_sign_in(self, instance):
         self.status_label.text = ""
-        self.manager.current = "signup"
+        self.manager.current = "auth"
