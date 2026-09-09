@@ -1,27 +1,27 @@
+import random
+
 from kivy.app import App
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
+from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.graphics import Color, Rectangle
+from kivy.metrics import dp, sp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.dropdown import DropDown
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
+from kivy.uix.label import Label
 from kivy.uix.popup import Popup
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.widget import Widget
-from kivy.graphics import Color, Rectangle
-from kivy.clock import Clock
-from kivy.utils import platform
-from kivy.metrics import dp, sp
 from kivy.uix.screenmanager import Screen, ScreenManager
-from ui_components import RoundedButton
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
+from kivy.uix.widget import Widget
+from kivy.utils import platform
 
 from auth_screen import AuthScreen
 from signup_screen import SignUpScreen
-
-from supabase_client import get_foods, add_food, delete_food
-
-import random
+from supabase_client import add_food, delete_food, get_foods
+from ui_components import MenuButton, RoundedButton
 
 
 if platform not in ("android", "ios"):
@@ -53,7 +53,7 @@ class FoodApp(App):
             source=background_source,
             fit_mode="cover",
             size_hint=(1, 1),
-            pos_hint={"x": 0, "y": 0}
+            pos_hint={"x": 0, "y": 0},
         )
 
         root.add_widget(background)
@@ -65,9 +65,9 @@ class FoodApp(App):
             size_hint=(0.9, 0.10),
             pos_hint={
                 "center_x": 0.5,
-                "center_y": 0.79
+                "center_y": 0.79,
             },
-            color=(0.02, 0.35, 0.28, 1)
+            color=(0.02, 0.35, 0.28, 1),
         )
 
         self.choose_button = RoundedButton(
@@ -75,10 +75,10 @@ class FoodApp(App):
             size_hint=(0.74, None),
             pos_hint={
                 "center_x": 0.5,
-                "center_y": 0.65
+                "center_y": 0.65,
             },
             my_color=(0.10, 0.55, 0.45, 1),
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
         )
 
         self.result = Label(
@@ -88,9 +88,9 @@ class FoodApp(App):
             size_hint=(0.9, 0.10),
             pos_hint={
                 "center_x": 0.5,
-                "center_y": 0.51
+                "center_y": 0.51,
             },
-            color=(0.02, 0.35, 0.28, 1)
+            color=(0.02, 0.35, 0.28, 1),
         )
 
         self.list_button = RoundedButton(
@@ -98,10 +98,47 @@ class FoodApp(App):
             size_hint=(0.74, None),
             pos_hint={
                 "center_x": 0.5,
-                "center_y": 0.37
+                "center_y": 0.37,
             },
             my_color=(0.10, 0.55, 0.45, 1),
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
+        )
+
+        self.menu_button = MenuButton(
+            text="",
+            size_hint=(None, None),
+            width=dp(48),
+            height=dp(48),
+            pos_hint={
+                "x": 0.03,
+                "top": 0.97,
+            },
+            my_color=(0.10, 0.55, 0.45, 1),
+            color=(1, 1, 1, 1),
+        )
+
+        self.menu = DropDown(
+            auto_width=False,
+            width=dp(160),
+        )
+
+        logout_button = RoundedButton(
+            text="Logout",
+            font_size=sp(17),
+            size_hint_y=None,
+            height=dp(48),
+            my_color=(0.55, 0.20, 0.20, 1),
+            color=(1, 1, 1, 1),
+        )
+
+        logout_button.bind(
+            on_release=self.logout_from_menu
+        )
+
+        self.menu.add_widget(logout_button)
+
+        self.menu_button.bind(
+            on_release=self.menu.open
         )
 
         self.choose_button.bind(
@@ -116,6 +153,7 @@ class FoodApp(App):
         root.add_widget(self.choose_button)
         root.add_widget(self.result)
         root.add_widget(self.list_button)
+        root.add_widget(self.menu_button)
 
         Window.bind(size=self.update_layout)
         Clock.schedule_once(self.update_layout, 0)
@@ -134,7 +172,7 @@ class FoodApp(App):
         )
         manager.add_widget(food_screen)
 
-        # Temporaneamente mostra sempre il login all'avvio
+        # Mostra il login all'avvio
         manager.current = "auth"
 
         return manager
@@ -148,6 +186,10 @@ class FoodApp(App):
         self.session = None
         self.food = []
         self.root.current = "auth"
+
+    def logout_from_menu(self, instance):
+        self.menu.dismiss()
+        self.logout()
 
     def update_layout(self, *args):
         self.choose_button.height = dp(52)
@@ -182,8 +224,8 @@ class FoodApp(App):
                 dp(18),
                 dp(10),
                 dp(18),
-                dp(12)
-            )
+                dp(12),
+            ),
         )
 
         with popup_layout.canvas.before:
@@ -191,12 +233,12 @@ class FoodApp(App):
                 0.70,
                 0.92,
                 0.88,
-                1
+                1,
             )
 
             rect = Rectangle(
                 size=popup_layout.size,
-                pos=popup_layout.pos
+                pos=popup_layout.pos,
             )
 
         def update_rect(instance, value):
@@ -205,13 +247,13 @@ class FoodApp(App):
 
         popup_layout.bind(
             size=update_rect,
-            pos=update_rect
+            pos=update_rect,
         )
 
         content_scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
-            do_scroll_y=True
+            do_scroll_y=True,
         )
 
         content_column = BoxLayout(
@@ -221,9 +263,9 @@ class FoodApp(App):
                 0,
                 dp(8),
                 0,
-                dp(8)
+                dp(8),
             ),
-            size_hint_y=None
+            size_hint_y=None,
         )
 
         content_column.bind(
@@ -238,13 +280,13 @@ class FoodApp(App):
             color=(0.02, 0.35, 0.28, 1),
             size_hint_y=None,
             halign="left",
-            valign="top"
+            valign="top",
         )
 
         def update_label_layout(instance, size):
             instance.text_size = (
                 content_scroll.width - dp(20),
-                None
+                None,
             )
 
             instance.height = (
@@ -258,7 +300,7 @@ class FoodApp(App):
         content_scroll.bind(
             width=lambda *args: update_label_layout(
                 label,
-                label.texture_size
+                label.texture_size,
             )
         )
 
@@ -266,7 +308,7 @@ class FoodApp(App):
 
         middle_space = Widget(
             size_hint_y=None,
-            height=dp(8)
+            height=dp(8),
         )
 
         content_column.add_widget(
@@ -280,7 +322,7 @@ class FoodApp(App):
         form_layout = BoxLayout(
             orientation="vertical",
             spacing=form_spacing,
-            size_hint_y=None
+            size_hint_y=None,
         )
 
         form_layout.height = (
@@ -297,8 +339,8 @@ class FoodApp(App):
             height=control_height,
             padding=(
                 dp(6),
-                dp(6)
-            )
+                dp(6),
+            ),
         )
 
         add_popup_button = Button(
@@ -311,9 +353,9 @@ class FoodApp(App):
                 0.22,
                 0.68,
                 0.48,
-                1
+                1,
             ),
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
         )
 
         delete_input = TextInput(
@@ -324,8 +366,8 @@ class FoodApp(App):
             height=control_height,
             padding=(
                 dp(6),
-                dp(6)
-            )
+                dp(6),
+            ),
         )
 
         delete_button = Button(
@@ -338,9 +380,9 @@ class FoodApp(App):
                 0.55,
                 0.20,
                 0.20,
-                1
+                1,
             ),
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
         )
 
         status_label = Label(
@@ -348,7 +390,7 @@ class FoodApp(App):
             font_size=sp(13),
             color=(0.02, 0.35, 0.28, 1),
             size_hint_y=None,
-            height=status_height
+            height=status_height,
         )
 
         form_layout.add_widget(
@@ -377,7 +419,7 @@ class FoodApp(App):
 
         bottom_space = Widget(
             size_hint_y=None,
-            height=dp(16)
+            height=dp(16),
         )
 
         content_column.add_widget(
@@ -394,7 +436,7 @@ class FoodApp(App):
 
         def scroll_to_input(
             instance,
-            focused
+            focused,
         ):
             if not focused:
                 return
@@ -403,9 +445,9 @@ class FoodApp(App):
                 lambda dt: content_scroll.scroll_to(
                     instance,
                     padding=dp(16),
-                    animate=True
+                    animate=True,
                 ),
-                0.2
+                0.2,
             )
 
         add_input.bind(
@@ -453,7 +495,7 @@ class FoodApp(App):
 
                 Clock.schedule_once(
                     clear_status,
-                    3
+                    3,
                 )
 
                 add_input.text = ""
@@ -493,7 +535,7 @@ class FoodApp(App):
 
                 Clock.schedule_once(
                     clear_status,
-                    3
+                    3,
                 )
 
                 delete_input.text = ""
@@ -516,20 +558,20 @@ class FoodApp(App):
                 0.70,
                 0.92,
                 0.88,
-                1
+                1,
             ),
             title_color=(
                 0.02,
                 0.35,
                 0.28,
-                1
+                1,
             ),
             separator_color=(
                 0.10,
                 0.55,
                 0.45,
-                1
-            )
+                1,
+            ),
         )
 
         popup.open()
