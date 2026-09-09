@@ -23,6 +23,10 @@ from signup_screen import SignUpScreen
 from supabase_client import add_food, delete_food, get_foods
 from ui_components import MenuButton, RoundedButton
 
+from requests import RequestException
+
+from auth_client import sign_out
+
 
 if platform not in ("android", "ios"):
     Window.size = (360, 640)
@@ -183,6 +187,21 @@ class FoodApp(App):
         self.root.current = "food"
 
     def logout(self):
+        access_token = None
+
+        if self.session:
+            access_token = self.session.get(
+                "access_token"
+            )
+
+        if access_token:
+            try:
+                sign_out(access_token)
+            except RequestException as error:
+                print(f"Logout Supabase fallito: {error}")
+            else:
+                print("Logout Supabase riuscito")
+
         self.session = None
         self.food = []
         self.root.current = "auth"

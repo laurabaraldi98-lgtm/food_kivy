@@ -7,6 +7,7 @@ from auth_client import (
     AUTH_BASE_URL,
     HEADERS,
     sign_in,
+    sign_out,
     sign_up,
 )
 
@@ -100,3 +101,22 @@ def test_sign_in_raises_http_error(mock_post):
         )
 
     assert error.value.response.status_code == 400
+
+
+@patch("auth_client.requests.post")
+def test_sign_out_sends_access_token(mock_post):
+    mock_response = Mock()
+    mock_post.return_value = mock_response
+
+    sign_out("test-access-token")
+
+    mock_post.assert_called_once_with(
+        f"{AUTH_BASE_URL}/logout",
+        headers={
+            **HEADERS,
+            "Authorization": "Bearer test-access-token",
+        },
+        timeout=10,
+    )
+
+    mock_response.raise_for_status.assert_called_once_with()

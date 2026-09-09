@@ -42,3 +42,18 @@ def sign_in(email, password):
     response.raise_for_status()
 
     return response.json()
+
+
+def sign_out(access_token):
+    logout_headers = {
+        **HEADERS,
+        "Authorization": f"Bearer {access_token}",
+    }
+
+    response = requests.post(
+        f"{AUTH_BASE_URL}/logout",
+        headers=logout_headers,
+        timeout=10,
+    )
+
+    response.raise_for_status()
