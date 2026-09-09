@@ -162,11 +162,11 @@ class FoodApp(App):
         Window.bind(size=self.update_layout)
         Clock.schedule_once(self.update_layout, 0)
 
-        # Inserisce l'interfaccia esistente dentro la schermata dei cibi
+        # Wraps the existing interface inside the food screen
         food_screen = Screen(name="food")
         food_screen.add_widget(root)
 
-        # Gestisce il passaggio tra accesso, registrazione e lista dei cibi
+        # Manages navigation between login, signup, and food screens
         manager = ScreenManager()
         manager.add_widget(
             AuthScreen(name="auth")
@@ -176,7 +176,7 @@ class FoodApp(App):
         )
         manager.add_widget(food_screen)
 
-        # Mostra il login all'avvio
+        # Shows the login screen when the app starts
         manager.current = "auth"
 
         return manager
