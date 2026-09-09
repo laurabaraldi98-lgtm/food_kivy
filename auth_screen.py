@@ -97,6 +97,10 @@ class AuthScreen(Screen):
             height=dp(34),
         )
 
+        sign_in_button.bind(
+            on_press=self.handle_sign_in
+        )
+
         sign_up_button.bind(
             on_press=self.open_sign_up
         )
