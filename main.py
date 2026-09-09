@@ -37,7 +37,8 @@ Window.set_icon("images/icon.png")
 
 class FoodApp(App):
     def build(self):
-        self.food = self.load_food()
+        self.session = None
+        self.food = []
 
         root = FloatLayout()
 
@@ -137,6 +138,16 @@ class FoodApp(App):
         manager.current = "auth"
 
         return manager
+
+    def open_food_screen(self, session):
+        self.session = session
+        self.food = self.load_food()
+        self.root.current = "food"
+
+    def logout(self):
+        self.session = None
+        self.food = []
+        self.root.current = "auth"
 
     def update_layout(self, *args):
         self.choose_button.height = dp(52)

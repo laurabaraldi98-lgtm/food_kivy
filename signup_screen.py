@@ -159,8 +159,7 @@ class SignUpScreen(Screen):
 
         if result.get("access_token"):
             app = App.get_running_app()
-            app.session = result
-            self.manager.current = "food"
+            app.open_food_screen(result)
             return
 
         self.status_label.color = (

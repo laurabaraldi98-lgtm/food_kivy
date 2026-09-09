@@ -152,10 +152,9 @@ class AuthScreen(Screen):
             return
 
         app = App.get_running_app()
-        app.session = session
 
         self.status_label.text = ""
-        self.manager.current = "food"
+        app.open_food_screen(session)
 
     def open_sign_up(self, instance):
         self.status_label.text = ""
