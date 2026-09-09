@@ -1,10 +1,12 @@
 # Food App
 
-A responsive food suggestion app built with Python and Kivy, available on desktop and Android.
+A responsive food suggestion app built with Python and Kivy for desktop and Android.
 
 The app solves a simple everyday problem: deciding what to eat.
 
-Users can maintain a list of foods, add or remove items, and let the app randomly choose one. The list is stored remotely in Supabase, so changes persist between sessions and across devices using the same shared database.
+Users can create an account, sign in, maintain a list of foods, add or remove items, and let the app randomly choose one. The list is stored remotely in Supabase, so changes persist between sessions.
+
+Supabase Authentication protects access to the application, while Row Level Security prevents anonymous users from accessing the food database.
 
 The interface is currently in Italian.
 
@@ -26,19 +28,25 @@ Instead of spending time trying to decide, I built a small application that make
 
 The original idea was intentionally simple: keep a list of foods you actually eat, press a button, and let the app pick one.
 
-What began as a small Python project gradually evolved into a cross-platform application involving remote persistence, REST API communication, Android packaging, responsive UI design, mobile keyboard handling, CI builds, and debugging across different physical devices.
+What began as a small Python project gradually evolved into a cross-platform application involving remote persistence, REST API communication, user authentication, database security, Android packaging, responsive UI design, mobile keyboard handling, automated tests, CI builds, and debugging across different physical devices.
 
 ---
 
 ## Features
 
+- User registration with email and password
+- Email confirmation through Supabase
+- User login and logout
 - Random food suggestion
 - Add new foods
 - Remove existing foods
 - Persistent food list stored in Supabase
 - Supabase REST API integration
-- Shared food list across sessions
+- Authenticated database requests
+- Row Level Security on the `foods` table
 - Responsive Kivy interface
+- Reusable rounded buttons and menu button
+- Hamburger menu with logout action
 - Density-independent widget sizing with `dp`
 - Scalable font sizing with `sp`
 - Desktop support
@@ -50,16 +58,29 @@ What began as a small Python project gradually evolved into a cross-platform app
 - Custom application icon
 - Custom font and graphical interface
 - Italian-language UI
+- Automated tests for the authentication and database clients
 
 ---
 
 ## How It Works
 
-When the application starts, it loads the current food list from a Supabase `foods` table.
+When the application starts, it displays the login screen.
 
-The Supabase communication is isolated in `supabase_client.py` and uses standard HTTP requests.
+Users can sign in with an existing account or open a separate registration screen to create a new one.
 
-The application performs three main operations:
+New accounts receive a confirmation email from Supabase. The confirmation link redirects to a small responsive page hosted with GitHub Pages:
+
+```text
+https://laurabaraldi98-lgtm.github.io/food_kivy/
+```
+
+After a successful login, Supabase returns a session containing an access token. The application stores the session while it is running and loads the current food list from the Supabase `foods` table.
+
+Authentication logic is isolated in `auth_client.py`, while database communication is isolated in `supabase_client.py`.
+
+Both clients use standard HTTP requests instead of the full Supabase Python SDK.
+
+The food client performs three main operations:
 
 - `GET` — retrieve the current food list
 - `POST` — add a new food
@@ -71,17 +92,53 @@ The REST endpoint is built from the Supabase project URL:
 BASE_URL = f"{SUPABASE_URL}/rest/v1/foods"
 ```
 
-The app then sends requests using the Supabase API key through HTTP headers.
+Every food request includes the user's access token:
+
+```python
+headers["Authorization"] = f"Bearer {access_token}"
+```
 
 When a food is added or deleted, the database is updated immediately. This means the list is still available after closing and reopening the app.
 
-At the moment, the application uses one shared food list rather than separate user accounts.
+Selecting logout invalidates the Supabase session, clears the local session and food list, and returns the user to the login screen.
+
+At the moment, all authenticated users still use the same shared food list. User-specific and group-shared lists will be implemented in a later development branch.
+
+---
+
+## Database Security
+
+Row Level Security is enabled on the Supabase `foods` table.
+
+The current database policies allow authenticated users to:
+
+- read foods
+- add foods
+- delete foods
+
+Anonymous requests cannot access the food list.
+
+The SQL used to enable RLS and create the policies is recorded in:
+
+```text
+supabase/migrations/20260909_enable_foods_rls.sql
+```
+
+The current policies protect the database from anonymous access, but they do not yet separate data by user. All authenticated users can currently access the same foods.
+
+A future database migration will connect foods to users and groups and replace the current policies with membership-based policies.
 
 ---
 
 ## User Interface
 
-The main screen contains two primary actions:
+The application uses a Kivy `ScreenManager` to move between:
+
+- login screen
+- registration screen
+- main food screen
+
+The main screen contains two primary actions.
 
 ### Choose for me
 
@@ -96,6 +153,14 @@ Opens the food-management popup where users can:
 - remove an existing food
 
 The popup also displays status feedback when an item is added, already exists, is removed, or cannot be found.
+
+### Hamburger menu
+
+A hamburger button in the upper-left corner opens a dropdown menu containing the logout action.
+
+The reusable `RoundedButton` and `MenuButton` components are defined in `ui_components.py`.
+
+The hamburger icon is drawn using three Kivy canvas lines, so it does not depend on a special font character.
 
 ---
 
@@ -169,7 +234,7 @@ else:
     background_source = "images/background.png"
 ```
 
-This allows tall mobile displays to use an illustration composed specifically for that screen shape while standard displays use the original version.
+This allows tall mobile displays to use an illustration composed specifically for that screen shape, while standard displays use the original version.
 
 ---
 
@@ -202,7 +267,7 @@ When an input receives focus, the popup also scrolls toward that widget:
 content_scroll.scroll_to(
     instance,
     padding=dp(16),
-    animate=True
+    animate=True,
 )
 ```
 
@@ -247,7 +312,7 @@ The local JSON storage was replaced with a Supabase database.
 
 This introduced remote persistence and REST API communication.
 
-The application now communicates with Supabase through `requests` rather than the full Supabase Python SDK.
+The application communicates with Supabase through `requests` rather than the full Supabase Python SDK.
 
 This keeps the Android dependency tree significantly lighter.
 
@@ -276,7 +341,7 @@ This reduced the dependency tree while preserving the database functionality req
 
 ### 6. Device testing and responsive redesign
 
-After producing a working APK, the application was tested on physical Android devices.
+After producing a working APK, the earlier version of the application was tested on physical Android devices.
 
 This revealed differences that were not visible during desktop development, including:
 
@@ -288,6 +353,24 @@ This revealed differences that were not visible during desktop development, incl
 - controls hidden behind the keyboard
 
 The UI was progressively redesigned using `dp`, `sp`, responsive positioning, scrollable content, and adaptive image assets.
+
+### 7. Authentication and database security
+
+Supabase Authentication was added using direct REST requests.
+
+This introduced:
+
+- account registration
+- email confirmation
+- login
+- logout
+- access-token handling
+- separate authentication screens
+- protected database requests
+
+Row Level Security was then enabled to prevent anonymous access to the `foods` table.
+
+Automated tests were also added for the authentication and Supabase clients.
 
 ---
 
@@ -310,12 +393,20 @@ The UI was progressively redesigned using `dp`, `sp`, responsive positioning, sc
 - Python
 - Kivy
 
-### Backend / Data
+### Backend and data
 
 - Supabase
+- Supabase Auth
 - PostgreSQL
 - Supabase REST API
+- Row Level Security
 - Requests
+
+### Testing
+
+- pytest
+- pytest-cov
+- unittest.mock
 
 ### Android
 
@@ -323,11 +414,12 @@ The UI was progressively redesigned using `dp`, `sp`, responsive positioning, sc
 - python-for-android
 - Android SDK / NDK
 
-### Development
+### Development and deployment
 
 - Git
 - GitHub
 - GitHub Actions
+- GitHub Pages
 
 ---
 
@@ -337,27 +429,36 @@ The UI was progressively redesigned using `dp`, `sp`, responsive positioning, sc
 food_kivy/
 ├── .github/
 │   └── workflows/
-│
+│       └── build-apk.yml
+├── docs/
+│   └── index.html
 ├── fonts/
 │   └── Pacifico-Regular.ttf
-│
 ├── images/
 │   ├── background.png
 │   ├── background_tall.png
 │   └── icon.png
-│
 ├── screenshots/
 │   ├── home.png
 │   └── food-list.png
-│
+├── supabase/
+│   └── migrations/
+│       └── 20260909_enable_foods_rls.sql
+├── tests/
+│   ├── test_auth_client.py
+│   └── test_supabase_client.py
 ├── .gitignore
+├── auth_client.py
+├── auth_screen.py
 ├── buildozer.spec
 ├── main.py
+├── signup_screen.py
 ├── supabase_client.py
+├── ui_components.py
 └── README.md
 ```
 
-A local `config.py` file is also required, but it is intentionally excluded from Git because it contains Supabase configuration.
+A local `config.py` file is also required, but it is intentionally excluded from Git because it contains the Supabase project configuration.
 
 ---
 
@@ -375,10 +476,14 @@ Add:
 
 ```python
 SUPABASE_URL = "your-supabase-project-url"
-SUPABASE_KEY = "your-supabase-key"
+SUPABASE_KEY = "your-supabase-publishable-or-anon-key"
 ```
 
-`config.py` is included in `.gitignore` and should not be committed with real credentials.
+Use the Supabase publishable key or legacy `anon` key.
+
+Never place the `service_role` key inside the application.
+
+`config.py` is included in `.gitignore` and should not be committed with real project configuration.
 
 ---
 
@@ -404,23 +509,54 @@ python -m venv .venv
 
 Activate it on Windows:
 
-```bash
-.venv\Scripts\activate
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
-Install the desktop dependencies:
+Install the dependencies:
 
 ```bash
-pip install kivy requests
+pip install kivy requests pytest pytest-cov
 ```
 
-Create your local `config.py` with the required Supabase values.
+Create the local `config.py` file with the required Supabase values.
 
 Then run:
 
 ```bash
 python main.py
 ```
+
+---
+
+## Tests
+
+Run the automated tests with:
+
+```bash
+python -m pytest
+```
+
+Run the tests with coverage for the two HTTP client modules:
+
+```bash
+python -m pytest --cov=auth_client --cov=supabase_client --cov-report=term-missing
+```
+
+The current test suite contains nine tests covering:
+
+- signup
+- login
+- logout
+- authenticated headers
+- retrieving foods
+- adding foods
+- deleting foods
+- HTTP error handling
+
+The current tests provide 100% statement coverage for `auth_client.py` and `supabase_client.py`.
+
+This percentage does not represent coverage of the complete Kivy interface.
 
 ---
 
@@ -444,7 +580,7 @@ android.minapi = 24
 android.ndk_api = 24
 ```
 
-The custom launcher icon is configured with:
+The custom application icon is configured with:
 
 ```ini
 icon.filename = images/icon.png
@@ -452,22 +588,47 @@ icon.filename = images/icon.png
 
 Buildozer and python-for-android are used to produce the Android application package.
 
-The repository also contains a GitHub Actions workflow used for automated Android builds.
+The repository also contains a GitHub Actions workflow for automated Android builds.
+
+Earlier versions were successfully built and tested on physical Android devices. The current authentication version has been tested on desktop but still needs a new Android build and physical-device test.
 
 ---
 
 ## Current Limitations
 
-The project is functional, but there are still areas that could be expanded.
+The application is functional, but some important features are still under development.
 
 Currently:
 
-- there is one shared food list
-- there is no authentication
-- users do not have separate private lists
-- the application requires an Internet connection to access Supabase
+- all authenticated users share the same food list
+- foods are not yet connected to an owner or group
+- users cannot yet create private or shared group lists
+- the session is stored only while the application is running
+- users must log in again after restarting the application
+- access-token refresh is not yet implemented
+- database requests are synchronous
+- the application requires an Internet connection
 - network failures have limited user-facing error handling
-- the UI is currently only available in Italian
+- the interface is currently available only in Italian
+- the current authentication version still needs to be tested on Android
+
+---
+
+## Planned User and Group Lists
+
+The next development step is to make food lists belong to specific users and groups.
+
+The planned database model will include:
+
+- a `groups` table
+- a `group_members` table
+- a `group_id` column in the `foods` table
+
+A personal list will be represented by a group containing one user. A shared list will use the same structure but contain multiple selected users.
+
+New Row Level Security policies will allow users to access only foods belonging to groups of which they are members.
+
+This work will be completed in a separate feature branch.
 
 ---
 
@@ -475,21 +636,25 @@ Currently:
 
 Potential future versions could include:
 
-- user authentication
 - private food lists
 - shared household or group lists
+- group invitations
+- group roles and permissions
 - multiple lists
 - food categories
 - filters
 - favourites
+- persistent login
+- automatic token refresh
 - better network error feedback
 - loading indicators
+- asynchronous requests
 - retry handling
 - offline caching
 - synchronization after reconnecting
 - animations and additional UI polish
 - additional languages
-- automated UI testing
+- automated Kivy interface tests
 
 ---
 
@@ -500,22 +665,36 @@ This project gave me practical experience with more than the initial application
 ### Python and application structure
 
 - separating responsibilities between files
-- handling application state
+- object-oriented programming
+- inheritance
+- application state management
 - writing reusable functions
 - working with external configuration
+- exception handling
 
 ### Kivy
 
-- layouts and widgets
-- popups
-- scroll views
+- widgets and layouts
+- screen management
+- buttons and labels
 - text inputs
+- popups and dropdown menus
 - canvas drawing
-- custom rounded buttons
+- custom UI components
 - custom fonts
 - responsive positioning
 - `dp` and `sp`
 - mobile keyboard behaviour
+
+### Authentication and security
+
+- account registration
+- login and logout flows
+- email confirmation
+- access tokens
+- authenticated HTTP requests
+- Row Level Security
+- PostgreSQL policies
 
 ### APIs and databases
 
@@ -525,7 +704,16 @@ This project gave me practical experience with more than the initial application
 - JSON payloads
 - remote persistence
 - Supabase
-- PostgreSQL-backed data
+- PostgreSQL
+- SQL migrations
+
+### Testing
+
+- pytest
+- mocking HTTP requests
+- testing successful responses
+- testing HTTP errors
+- measuring code coverage
 
 ### Android development
 
@@ -540,7 +728,7 @@ This project gave me practical experience with more than the initial application
 ### Responsive design
 
 - pixel density
-- physical vs logical dimensions
+- physical versus logical dimensions
 - aspect ratios
 - image cropping
 - adaptive assets
@@ -551,24 +739,30 @@ This project gave me practical experience with more than the initial application
 - feature branches
 - commits
 - merges
-- resolving branch divergence
 - GitHub Actions
+- GitHub Pages
 - iterative testing and debugging
 
 ---
 
 ## Status
 
-The core application is working on desktop and Android.
+The current version includes:
 
-Current functionality includes:
-
+- account registration
+- email confirmation
+- login and logout
+- authenticated Supabase requests
+- Row Level Security
 - remote food persistence
 - random food selection
 - add and delete operations
-- responsive mobile UI
+- responsive Kivy interface
 - Android keyboard support
 - adaptive backgrounds
-- custom app branding
+- custom application branding
+- nine automated client tests
 
-Further development will focus on user-specific data, stronger error handling, and additional product features.
+The authentication flow and food operations are working correctly on desktop.
+
+The next major development phase will introduce user-owned and group-shared food lists with membership-based database policies.
