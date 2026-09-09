@@ -220,8 +220,18 @@ class FoodApp(App):
         self.title_label.font_size = sp(34)
         self.result.font_size = sp(30)
 
+    def get_access_token(self):
+        if not self.session:
+            raise RuntimeError(
+                "User is not authenticated"
+            )
+
+        return self.session["access_token"]
+
     def load_food(self):
-        return get_foods()
+        return get_foods(
+            self.get_access_token()
+        )
 
     def choose_food(self, instance):
         if not self.food:
@@ -495,7 +505,10 @@ class FoodApp(App):
                 )
 
                 if new_food not in self.food:
-                    add_food(new_food)
+                    add_food(
+                        new_food,
+                        self.get_access_token()
+                    )
 
                     self.food.append(
                         new_food
@@ -532,7 +545,8 @@ class FoodApp(App):
 
                 if food_to_delete in self.food:
                     delete_food(
-                        food_to_delete
+                        food_to_delete,
+                        self.get_access_token()
                     )
 
                     self.food.remove(
