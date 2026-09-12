@@ -3,34 +3,21 @@ import random
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp, sp
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.dropdown import DropDown
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
-from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen, ScreenManager
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.textinput import TextInput
-from kivy.uix.widget import Widget
 from kivy.utils import platform
-
-from auth_screen import AuthScreen
-from signup_screen import SignUpScreen
-from supabase_client import (
-    add_food,
-    delete_food,
-    get_food_lists,
-    get_foods,
-)
-from ui_components import MenuButton, RoundedButton
-
 from requests import RequestException
 
 from auth_client import sign_out
+from auth_screen import AuthScreen
+from food_lists_screen import FoodListsScreen
+from signup_screen import SignUpScreen
+from supabase_client import get_food_lists, get_foods
+from ui_components import MenuButton, RoundedButton
 
 
 if platform not in ("android", "ios"):
@@ -40,7 +27,6 @@ if platform == "android":
     Window.softinput_mode = "below_target"
 
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
-
 Window.set_icon("images/icon.png")
 
 
@@ -48,18 +34,31 @@ class FoodApp(App):
     def build(self):
         self.session = None
         self.food = []
-
         self.food_lists = []
         self.current_list_id = None
+        self.current_list_name = ""
 
+        home_screen = Screen(name="food")
+        home_screen.add_widget(self.build_home())
+
+        manager = ScreenManager()
+        manager.add_widget(AuthScreen(name="auth"))
+        manager.add_widget(SignUpScreen(name="signup"))
+        manager.add_widget(home_screen)
+        manager.add_widget(FoodListsScreen(name="food_lists"))
+        manager.current = "auth"
+
+        return manager
+
+    def build_home(self):
         root = FloatLayout()
 
         ratio = Window.width / Window.height
-
-        if ratio < 0.48:
-            background_source = "images/background_tall.png"
-        else:
-            background_source = "images/background.png"
+        background_source = (
+            "images/background_tall.png"
+            if ratio < 0.48
+            else "images/background.png"
+        )
 
         background = Image(
             source=background_source,
@@ -67,7 +66,6 @@ class FoodApp(App):
             size_hint=(1, 1),
             pos_hint={"x": 0, "y": 0},
         )
-
         root.add_widget(background)
 
         self.title_label = Label(
@@ -75,20 +73,14 @@ class FoodApp(App):
             font_name="fonts/Pacifico-Regular.ttf",
             markup=True,
             size_hint=(0.9, 0.10),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.79,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.79},
             color=(0.02, 0.35, 0.28, 1),
         )
 
         self.choose_button = RoundedButton(
             text="Scegli per me",
             size_hint=(0.74, None),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.65,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.62},
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
@@ -98,22 +90,15 @@ class FoodApp(App):
             font_name="fonts/Pacifico-Regular.ttf",
             markup=True,
             size_hint=(0.9, 0.10),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.51,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.48},
             color=(0.02, 0.35, 0.28, 1),
         )
 
-        self.list_button = RoundedButton(
-            text="Vedi lista cibi",
-            size_hint=(0.74, None),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.37,
-            },
-            my_color=(0.10, 0.55, 0.45, 1),
-            color=(1, 1, 1, 1),
+        self.active_list_label = Label(
+            text="Nessuna lista attiva",
+            size_hint=(0.9, 0.08),
+            pos_hint={"center_x": 0.5, "center_y": 0.34},
+            color=(0.02, 0.35, 0.28, 1),
         )
 
         self.menu_button = MenuButton(
@@ -121,18 +106,22 @@ class FoodApp(App):
             size_hint=(None, None),
             width=dp(48),
             height=dp(48),
-            pos_hint={
-                "x": 0.03,
-                "top": 0.97,
-            },
+            pos_hint={"x": 0.03, "top": 0.97},
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
 
-        self.menu = DropDown(
-            auto_width=False,
-            width=dp(160),
+        self.menu = DropDown(auto_width=False, width=dp(170))
+
+        lists_button = RoundedButton(
+            text="Gestisci liste",
+            font_size=sp(17),
+            size_hint_y=None,
+            height=dp(48),
+            my_color=(0.10, 0.55, 0.45, 1),
+            color=(1, 1, 1, 1),
         )
+        lists_button.bind(on_release=self.open_food_lists_from_menu)
 
         logout_button = RoundedButton(
             text="Logout",
@@ -142,77 +131,75 @@ class FoodApp(App):
             my_color=(0.55, 0.20, 0.20, 1),
             color=(1, 1, 1, 1),
         )
+        logout_button.bind(on_release=self.logout_from_menu)
 
-        logout_button.bind(
-            on_release=self.logout_from_menu
-        )
-
+        self.menu.add_widget(lists_button)
         self.menu.add_widget(logout_button)
-
-        self.menu_button.bind(
-            on_release=self.menu.open
-        )
-
-        self.choose_button.bind(
-            on_press=self.choose_food
-        )
-
-        self.list_button.bind(
-            on_press=self.show_food_list
-        )
+        self.menu_button.bind(on_release=self.menu.open)
+        self.choose_button.bind(on_press=self.choose_food)
 
         root.add_widget(self.title_label)
         root.add_widget(self.choose_button)
         root.add_widget(self.result)
-        root.add_widget(self.list_button)
+        root.add_widget(self.active_list_label)
         root.add_widget(self.menu_button)
 
         Window.bind(size=self.update_layout)
         Clock.schedule_once(self.update_layout, 0)
 
-        # Wraps the existing interface inside the food screen
-        food_screen = Screen(name="food")
-        food_screen.add_widget(root)
-
-        # Manages navigation between login, signup, and food screens
-        manager = ScreenManager()
-        manager.add_widget(
-            AuthScreen(name="auth")
-        )
-        manager.add_widget(
-            SignUpScreen(name="signup")
-        )
-        manager.add_widget(food_screen)
-
-        # Shows the login screen when the app starts
-        manager.current = "auth"
-
-        return manager
+        return root
 
     def open_food_screen(self, session):
         self.session = session
-        self.food_lists = get_food_lists(
-            self.get_access_token()
-        )
-
-        if not self.food_lists:
-            raise RuntimeError(
-                "No food lists available"
-            )
-
-        self.current_list_id = (
-            self.food_lists[0]["id"]
-        )
-        self.food = self.load_food()
+        self.reload_food_lists()
         self.root.current = "food"
+
+    def reload_food_lists(self):
+        previous_list_id = self.current_list_id
+        self.food_lists = get_food_lists(self.get_access_token())
+
+        selected_list = next(
+            (
+                food_list
+                for food_list in self.food_lists
+                if food_list["id"] == previous_list_id
+            ),
+            self.food_lists[0] if self.food_lists else None,
+        )
+
+        if selected_list:
+            self.select_food_list(selected_list)
+        else:
+            self.clear_active_food_list()
+
+    def select_food_list(self, food_list):
+        self.current_list_id = food_list["id"]
+        self.current_list_name = food_list["name"]
+        self.food = get_foods(
+            self.current_list_id,
+            self.get_access_token(),
+        )
+        self.active_list_label.text = (
+            f"Lista attiva: {self.current_list_name}"
+        )
+        self.result.text = ""
+
+    def clear_active_food_list(self):
+        self.current_list_id = None
+        self.current_list_name = ""
+        self.food = []
+        self.active_list_label.text = "Nessuna lista attiva"
+        self.result.text = ""
+
+    def open_food_lists_from_menu(self, instance):
+        self.menu.dismiss()
+        self.root.current = "food_lists"
 
     def logout(self):
         access_token = None
 
         if self.session:
-            access_token = self.session.get(
-                "access_token"
-            )
+            access_token = self.session.get("access_token")
 
         if access_token:
             try:
@@ -223,9 +210,8 @@ class FoodApp(App):
                 print("Logout Supabase riuscito")
 
         self.session = None
-        self.food = []
         self.food_lists = []
-        self.current_list_id = None
+        self.clear_active_food_list()
         self.root.current = "auth"
 
     def logout_from_menu(self, instance):
@@ -234,404 +220,33 @@ class FoodApp(App):
 
     def update_layout(self, *args):
         self.choose_button.height = dp(52)
-        self.list_button.height = dp(52)
-
         self.choose_button.font_size = sp(20)
-        self.list_button.font_size = sp(20)
-
         self.title_label.font_size = sp(34)
         self.result.font_size = sp(30)
+        self.active_list_label.font_size = sp(16)
 
     def get_access_token(self):
         if not self.session:
-            raise RuntimeError(
-                "User is not authenticated"
-            )
+            raise RuntimeError("User is not authenticated")
 
         return self.session["access_token"]
 
-    def load_food(self):
-        return get_foods(
-            self.get_access_token()
-        )
+    def get_user_id(self):
+        if not self.session:
+            raise RuntimeError("User is not authenticated")
+
+        return self.session["user"]["id"]
 
     def choose_food(self, instance):
-        if not self.food:
-            self.result.text = (
-                "[b]Aggiungi prima qualche cibo[/b]"
-            )
+        if not self.current_list_id:
+            self.result.text = "[b]Crea prima una lista[/b]"
             return
 
-        choice = random.choice(self.food)
-
-        self.result.text = f"[b]{choice}[/b]"
-
-    def show_food_list(self, instance):
-        food_text = "\n".join(self.food)
-
-        popup_layout = BoxLayout(
-            orientation="vertical",
-            padding=(
-                dp(18),
-                dp(10),
-                dp(18),
-                dp(12),
-            ),
-        )
-
-        with popup_layout.canvas.before:
-            Color(
-                0.70,
-                0.92,
-                0.88,
-                1,
-            )
-
-            rect = Rectangle(
-                size=popup_layout.size,
-                pos=popup_layout.pos,
-            )
-
-        def update_rect(instance, value):
-            rect.size = instance.size
-            rect.pos = instance.pos
-
-        popup_layout.bind(
-            size=update_rect,
-            pos=update_rect,
-        )
-
-        content_scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            do_scroll_y=True,
-        )
-
-        content_column = BoxLayout(
-            orientation="vertical",
-            spacing=dp(4),
-            padding=(
-                0,
-                dp(8),
-                0,
-                dp(8),
-            ),
-            size_hint_y=None,
-        )
-
-        content_column.bind(
-            minimum_height=content_column.setter(
-                "height"
-            )
-        )
-
-        label = Label(
-            text=food_text,
-            font_size=sp(22),
-            color=(0.02, 0.35, 0.28, 1),
-            size_hint_y=None,
-            halign="left",
-            valign="top",
-        )
-
-        def update_label_layout(instance, size):
-            instance.text_size = (
-                content_scroll.width - dp(20),
-                None,
-            )
-
-            instance.height = (
-                instance.texture_size[1]
-            )
-
-        label.bind(
-            texture_size=update_label_layout
-        )
-
-        content_scroll.bind(
-            width=lambda *args: update_label_layout(
-                label,
-                label.texture_size,
-            )
-        )
-
-        content_column.add_widget(label)
-
-        middle_space = Widget(
-            size_hint_y=None,
-            height=dp(8),
-        )
-
-        content_column.add_widget(
-            middle_space
-        )
-
-        control_height = dp(36)
-        status_height = dp(20)
-        form_spacing = dp(4)
-
-        form_layout = BoxLayout(
-            orientation="vertical",
-            spacing=form_spacing,
-            size_hint_y=None,
-        )
-
-        form_layout.height = (
-            control_height * 4
-            + status_height
-            + form_spacing * 4
-        )
-
-        add_input = TextInput(
-            hint_text="Scrivi cibo da aggiungere",
-            multiline=False,
-            font_size=sp(15),
-            size_hint_y=None,
-            height=control_height,
-            padding=(
-                dp(6),
-                dp(6),
-            ),
-        )
-
-        add_popup_button = Button(
-            text="Aggiungi cibo",
-            font_size=sp(16),
-            size_hint_y=None,
-            height=control_height,
-            background_normal="",
-            background_color=(
-                0.22,
-                0.68,
-                0.48,
-                1,
-            ),
-            color=(1, 1, 1, 1),
-        )
-
-        delete_input = TextInput(
-            hint_text="Scrivi cibo da eliminare",
-            multiline=False,
-            font_size=sp(15),
-            size_hint_y=None,
-            height=control_height,
-            padding=(
-                dp(6),
-                dp(6),
-            ),
-        )
-
-        delete_button = Button(
-            text="Elimina cibo",
-            font_size=sp(16),
-            size_hint_y=None,
-            height=control_height,
-            background_normal="",
-            background_color=(
-                0.55,
-                0.20,
-                0.20,
-                1,
-            ),
-            color=(1, 1, 1, 1),
-        )
-
-        status_label = Label(
-            text="",
-            font_size=sp(13),
-            color=(0.02, 0.35, 0.28, 1),
-            size_hint_y=None,
-            height=status_height,
-        )
-
-        form_layout.add_widget(
-            add_input
-        )
-
-        form_layout.add_widget(
-            add_popup_button
-        )
-
-        form_layout.add_widget(
-            delete_input
-        )
-
-        form_layout.add_widget(
-            delete_button
-        )
-
-        form_layout.add_widget(
-            status_label
-        )
-
-        content_column.add_widget(
-            form_layout
-        )
-
-        bottom_space = Widget(
-            size_hint_y=None,
-            height=dp(16),
-        )
-
-        content_column.add_widget(
-            bottom_space
-        )
-
-        content_scroll.add_widget(
-            content_column
-        )
-
-        popup_layout.add_widget(
-            content_scroll
-        )
-
-        def scroll_to_input(
-            instance,
-            focused,
-        ):
-            if not focused:
-                return
-
-            Clock.schedule_once(
-                lambda dt: content_scroll.scroll_to(
-                    instance,
-                    padding=dp(16),
-                    animate=True,
-                ),
-                0.2,
-            )
-
-        add_input.bind(
-            focus=scroll_to_input
-        )
-
-        delete_input.bind(
-            focus=scroll_to_input
-        )
-
-        def clear_status(dt):
-            status_label.text = ""
-
-        def refresh_list():
-            label.text = "\n".join(
-                self.food
-            )
-
-        def add_food_from_popup(instance):
-            new_food = add_input.text.strip()
-
-            if new_food:
-                new_food = (
-                    new_food[0].upper()
-                    + new_food[1:]
-                )
-
-                if new_food not in self.food:
-                    add_food(
-                        new_food,
-                        self.current_list_id,
-                        self.get_access_token(),
-                    )
-
-                    self.food.append(
-                        new_food
-                    )
-
-                    refresh_list()
-
-                    status_label.text = (
-                        f"Aggiunto: {new_food}"
-                    )
-
-                else:
-                    status_label.text = (
-                        f"{new_food} è già nella lista"
-                    )
-
-                Clock.schedule_once(
-                    clear_status,
-                    3,
-                )
-
-                add_input.text = ""
-
-        def delete_food_from_popup(instance):
-            food_to_delete = (
-                delete_input.text.strip()
-            )
-
-            if food_to_delete:
-                food_to_delete = (
-                    food_to_delete[0].upper()
-                    + food_to_delete[1:]
-                )
-
-                if food_to_delete in self.food:
-                    delete_food(
-                        food_to_delete,
-                        self.current_list_id,
-                        self.get_access_token(),
-                    )
-
-                    self.food.remove(
-                        food_to_delete
-                    )
-
-                    refresh_list()
-
-                    status_label.text = (
-                        f"Eliminato: "
-                        f"{food_to_delete}"
-                    )
-
-                else:
-                    status_label.text = (
-                        f"{food_to_delete} "
-                        f"non è nella lista"
-                    )
-
-                Clock.schedule_once(
-                    clear_status,
-                    3,
-                )
-
-                delete_input.text = ""
-
-        add_popup_button.bind(
-            on_press=add_food_from_popup
-        )
-
-        delete_button.bind(
-            on_press=delete_food_from_popup
-        )
-
-        popup = Popup(
-            title="Cibi disponibili",
-            title_size=sp(22),
-            content=popup_layout,
-            size_hint=(0.84, 0.84),
-            background="",
-            background_color=(
-                0.70,
-                0.92,
-                0.88,
-                1,
-            ),
-            title_color=(
-                0.02,
-                0.35,
-                0.28,
-                1,
-            ),
-            separator_color=(
-                0.10,
-                0.55,
-                0.45,
-                1,
-            ),
-        )
-
-        popup.open()
+        if not self.food:
+            self.result.text = "[b]Aggiungi prima qualche cibo[/b]"
+            return
+
+        self.result.text = f"[b]{random.choice(self.food)}[/b]"
 
 
 FoodApp().run()
