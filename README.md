@@ -43,7 +43,7 @@ What began as a small Python project gradually evolved into a cross-platform app
 - Persistent food list stored in Supabase
 - Supabase REST API integration
 - Authenticated database requests
-- Row Level Security on the `foods` table
+- Row Level Security on the `food_lists` and `foods` tables
 - Responsive Kivy interface
 - Reusable rounded buttons and menu button
 - Hamburger menu with logout action
@@ -59,6 +59,11 @@ What began as a small Python project gradually evolved into a cross-platform app
 - Custom font and graphical interface
 - Italian-language UI
 - Automated tests for the authentication and database clients
+- Multiple private food lists
+- Default list with 22 foods for every new user
+- Create, select, rename, and delete food lists
+- Dedicated scrollable list-management screen
+- Versioned PostgreSQL migrations
 
 ---
 
@@ -102,31 +107,28 @@ When a food is added or deleted, the database is updated immediately. This means
 
 Selecting logout invalidates the Supabase session, clears the local session and food list, and returns the user to the login screen.
 
-At the moment, all authenticated users still use the same shared food list. User-specific and group-shared lists will be implemented in a later development branch.
+User-specific and group-shared lists will be implemented in a later development branch.
 
 ---
 
 ## Database Security
 
-Row Level Security is enabled on the Supabase `foods` table.
+Row Level Security is enabled on the Supabase `default_foods`, `food_lists`, and `foods` tables.
 
 The current database policies allow authenticated users to:
 
-- read foods
-- add foods
-- delete foods
+- read the default food template
 
-Anonymous requests cannot access the food list.
+- read, create, rename, and delete only their own food lists
 
-The SQL used to enable RLS and create the policies is recorded in:
+- read, add, update, and delete foods only inside their own lists
+
+Anonymous users cannot access food lists or foods.
+
+The versioned SQL schema and Row Level Security policies are stored in:
 
 ```text
-supabase/migrations/20260909_enable_foods_rls.sql
-```
-
-The current policies protect the database from anonymous access, but they do not yet separate data by user. All authenticated users can currently access the same foods.
-
-A future database migration will connect foods to users and groups and replace the current policies with membership-based policies.
+supabase/migrations/
 
 ---
 
@@ -137,6 +139,7 @@ The application uses a Kivy `ScreenManager` to move between:
 - login screen
 - registration screen
 - main food screen
+- food-list management screen
 
 The main screen contains two primary actions.
 
@@ -429,7 +432,8 @@ Automated tests were also added for the authentication and Supabase clients.
 food_kivy/
 ├── .github/
 │   └── workflows/
-│       └── build-apk.yml
+│       ├── build-apk.yml
+│       └── tests.yml
 ├── docs/
 │   └── index.html
 ├── fonts/
@@ -442,8 +446,13 @@ food_kivy/
 │   ├── home.png
 │   └── food-list.png
 ├── supabase/
-│   └── migrations/
-│       └── 20260909_enable_foods_rls.sql
+│   ├── migrations/
+│   │   ├── 20260908_initial_foods_schema.sql
+│   │   ├── 20260909_enable_foods_rls.sql
+│   │   ├── 20260912091103_create_food_lists.sql
+│   │   └── 20260912210221_allow_deleting_default_food_lists.sql
+│   ├── .gitignore
+│   └── config.toml
 ├── tests/
 │   ├── test_auth_client.py
 │   └── test_supabase_client.py
@@ -451,7 +460,10 @@ food_kivy/
 ├── auth_client.py
 ├── auth_screen.py
 ├── buildozer.spec
+├── food_lists_screen.py
+├── food_popup.py
 ├── main.py
+├── pytest.ini
 ├── signup_screen.py
 ├── supabase_client.py
 ├── ui_components.py
@@ -543,7 +555,7 @@ Run the tests with coverage for the two HTTP client modules:
 python -m pytest --cov=auth_client --cov=supabase_client --cov-report=term-missing
 ```
 
-The current test suite contains nine tests covering:
+The current test suite contains 13 tests covering:
 
 - signup
 - login
@@ -600,8 +612,7 @@ The application is functional, but some important features are still under devel
 
 Currently:
 
-- all authenticated users share the same food list
-- foods are not yet connected to an owner or group
+- foods are not yet connected to a group
 - users cannot yet create private or shared group lists
 - the session is stored only while the application is running
 - users must log in again after restarting the application
@@ -636,11 +647,9 @@ This work will be completed in a separate feature branch.
 
 Potential future versions could include:
 
-- private food lists
 - shared household or group lists
 - group invitations
 - group roles and permissions
-- multiple lists
 - food categories
 - filters
 - favourites
