@@ -59,19 +59,15 @@ def get_foods(list_id, access_token):
     ]
 
 
-def create_food_list(
-    name,
-    owner_id,
-    access_token,
-):
+def create_food_list(name, owner_id, access_token):
+    headers = {
+        **get_authenticated_headers(access_token),
+        "Prefer": "return=representation",
+    }
+
     response = requests.post(
         FOOD_LISTS_URL,
-        headers={
-            **get_authenticated_headers(
-                access_token
-            ),
-            "Prefer": "return=representation",
-        },
+        headers=headers,
         json={
             "name": name,
             "owner_id": owner_id,
@@ -84,11 +80,7 @@ def create_food_list(
     return response.json()[0]
 
 
-def rename_food_list(
-    list_id,
-    name,
-    access_token,
-):
+def rename_food_list(list_id, name, access_token):
     response = requests.patch(
         FOOD_LISTS_URL,
         headers=get_authenticated_headers(
@@ -102,10 +94,7 @@ def rename_food_list(
     response.raise_for_status()
 
 
-def delete_food_list(
-    list_id,
-    access_token,
-):
+def delete_food_list(list_id, access_token):
     response = requests.delete(
         FOOD_LISTS_URL,
         headers=get_authenticated_headers(
@@ -118,11 +107,7 @@ def delete_food_list(
     response.raise_for_status()
 
 
-def add_food(
-    name,
-    list_id,
-    access_token,
-):
+def add_food(name, list_id, access_token):
     response = requests.post(
         FOODS_URL,
         headers=get_authenticated_headers(
@@ -138,11 +123,7 @@ def add_food(
     response.raise_for_status()
 
 
-def delete_food(
-    name,
-    list_id,
-    access_token,
-):
+def delete_food(name, list_id, access_token):
     response = requests.delete(
         FOODS_URL,
         headers=get_authenticated_headers(
