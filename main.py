@@ -20,7 +20,12 @@ from kivy.utils import platform
 
 from auth_screen import AuthScreen
 from signup_screen import SignUpScreen
-from supabase_client import add_food, delete_food, get_foods
+from supabase_client import (
+    add_food,
+    delete_food,
+    get_food_lists,
+    get_foods,
+)
 from ui_components import MenuButton, RoundedButton
 
 from requests import RequestException
@@ -43,6 +48,9 @@ class FoodApp(App):
     def build(self):
         self.session = None
         self.food = []
+
+        self.food_lists = []
+        self.current_list_id = None
 
         root = FloatLayout()
 
@@ -183,6 +191,18 @@ class FoodApp(App):
 
     def open_food_screen(self, session):
         self.session = session
+        self.food_lists = get_food_lists(
+            self.get_access_token()
+        )
+
+        if not self.food_lists:
+            raise RuntimeError(
+                "No food lists available"
+            )
+
+        self.current_list_id = (
+            self.food_lists[0]["id"]
+        )
         self.food = self.load_food()
         self.root.current = "food"
 
@@ -204,6 +224,8 @@ class FoodApp(App):
 
         self.session = None
         self.food = []
+        self.food_lists = []
+        self.current_list_id = None
         self.root.current = "auth"
 
     def logout_from_menu(self, instance):
@@ -507,7 +529,8 @@ class FoodApp(App):
                 if new_food not in self.food:
                     add_food(
                         new_food,
-                        self.get_access_token()
+                        self.current_list_id,
+                        self.get_access_token(),
                     )
 
                     self.food.append(
@@ -546,7 +569,8 @@ class FoodApp(App):
                 if food_to_delete in self.food:
                     delete_food(
                         food_to_delete,
-                        self.get_access_token()
+                        self.current_list_id,
+                        self.get_access_token(),
                     )
 
                     self.food.remove(
