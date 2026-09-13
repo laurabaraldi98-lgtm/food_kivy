@@ -97,7 +97,7 @@ class FoodApp(App):
         self.active_list_label = Label(
             text="Nessuna lista attiva",
             size_hint=(0.9, 0.08),
-            pos_hint={"center_x": 0.5, "center_y": 0.34},
+            pos_hint={"center_x": 0.5, "center_y": 0.20},
             color=(0.02, 0.35, 0.28, 1),
         )
 

@@ -37,7 +37,7 @@ class AuthScreen(Screen):
         )
 
         title = Label(
-            text="Cosa mangiamo?",
+            text="Food App",
             font_name="fonts/Pacifico-Regular.ttf",
             font_size=sp(34),
             color=(0.02, 0.35, 0.28, 1),
