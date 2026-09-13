@@ -24,7 +24,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install requests pytest pytest-cov
+          python -m pip install requests kivy pytest pytest-cov
 
       - name: Create test configuration
         run: |
@@ -36,11 +36,12 @@ jobs:
       - name: Run tests with coverage
         run: |
           python -m pytest \
-            --cov=auth_client \
-            --cov=auth_screen \
-            --cov=food_lists_screen \
-            --cov=main \
-            --cov=signup_screen \
-            --cov=supabase_client \
-            --cov-report=term-missing \
-            --cov-fail-under=100
+          --cov=auth_client \
+          --cov=auth_screen \
+          --cov=food_lists_screen \
+          --cov=food_popup \
+          --cov=main \
+          --cov=signup_screen \
+          --cov=supabase_client \
+          --cov-report=term-missing \
+          --cov-fail-under=100
