@@ -48,5 +48,6 @@ jobs:
             --cov=main \
             --cov=signup_screen \
             --cov=supabase_client \
+            --cov=ui_components \
             --cov-report=term-missing \
             --cov-fail-under=100
