@@ -39,6 +39,7 @@ jobs:
             --cov=auth_client \
             --cov=auth_screen \
             --cov=main \
+            --cov=signup_screen \
             --cov=supabase_client \
             --cov-report=term-missing \
             --cov-fail-under=100
