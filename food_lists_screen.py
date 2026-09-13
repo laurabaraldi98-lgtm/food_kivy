@@ -186,20 +186,25 @@ class FoodListsScreen(Screen):
                 size_hint_y=None,
             )
 
+            is_active = food_list["id"] == app.current_list_id
             is_selected = food_list["id"] == self.selected_list_id
             card.height = dp(104 if is_selected else 54)
 
             list_button = RoundedButton(
-                text=food_list["name"],
+                text=(
+                    f"*  {food_list['name']}"
+                    if is_active
+                    else food_list["name"]
+                ),
                 size_hint_y=None,
                 height=dp(48),
                 font_size=sp(17),
                 my_color=(
-                    (0.06, 0.42, 0.34, 1)
+                    (0.10, 0.55, 0.45, 0.22)
                     if is_selected
-                    else (0.10, 0.55, 0.45, 1)
+                    else (0, 0, 0, 0)
                 ),
-                color=(1, 1, 1, 1),
+                color=TEXT_COLOR,
             )
             list_button.bind(
                 on_release=lambda instance,
