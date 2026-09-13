@@ -2,13 +2,14 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
 from kivy.uix.textinput import TextInput
 from requests import RequestException
 
-from auth_client import sign_in
+from auth_client import request_password_reset, sign_in
 from ui_components import RoundedButton
 
 
@@ -28,7 +29,7 @@ class AuthScreen(Screen):
             orientation="vertical",
             spacing=dp(12),
             size_hint=(0.74, None),
-            height=dp(390),
+            height=dp(430),
             pos_hint={
                 "center_x": 0.5,
                 "center_y": 0.52,
@@ -72,6 +73,16 @@ class AuthScreen(Screen):
             color=(1, 1, 1, 1),
         )
 
+        forgot_password_button = Button(
+            text="Password dimenticata?",
+            font_size=sp(14),
+            size_hint_y=None,
+            height=dp(28),
+            background_normal="",
+            background_color=(0, 0, 0, 0),
+            color=(0.02, 0.35, 0.28, 1),
+        )
+
         account_prompt = Label(
             text="Non hai ancora un account?",
             font_size=sp(14),
@@ -105,10 +116,15 @@ class AuthScreen(Screen):
             on_press=self.open_sign_up
         )
 
+        forgot_password_button.bind(
+            on_press=self.handle_password_reset
+        )
+
         form.add_widget(title)
         form.add_widget(self.email_input)
         form.add_widget(self.password_input)
         form.add_widget(sign_in_button)
+        form.add_widget(forgot_password_button)
         form.add_widget(account_prompt)
         form.add_widget(sign_up_button)
         form.add_widget(self.status_label)
@@ -159,3 +175,22 @@ class AuthScreen(Screen):
     def open_sign_up(self, instance):
         self.status_label.text = ""
         self.manager.current = "signup"
+
+    def handle_password_reset(self, instance):
+        email = self.email_input.text.strip().lower()
+
+        if not email:
+            self.status_label.text = "Inserisci prima la tua email"
+            return
+
+        try:
+            request_password_reset(email)
+        except RequestException:
+            self.status_label.text = (
+                "Impossibile inviare l'email di recupero"
+            )
+            return
+
+        self.status_label.text = (
+            "Controlla la tua email per reimpostare la password"
+        )

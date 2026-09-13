@@ -10,6 +10,10 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
+PASSWORD_RESET_REDIRECT_URL = (
+    "https://laurabaraldi98-lgtm.github.io/food_kivy/"
+)
+
 
 def sign_up(email, password):
     response = requests.post(
@@ -42,6 +46,20 @@ def sign_in(email, password):
     response.raise_for_status()
 
     return response.json()
+
+
+def request_password_reset(email):
+    response = requests.post(
+        f"{AUTH_BASE_URL}/recover",
+        headers=HEADERS,
+        params={
+            "redirect_to": PASSWORD_RESET_REDIRECT_URL,
+        },
+        json={"email": email},
+        timeout=10,
+    )
+
+    response.raise_for_status()
 
 
 def sign_out(access_token):

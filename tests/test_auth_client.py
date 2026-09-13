@@ -6,10 +6,32 @@ from requests import HTTPError
 from auth_client import (
     AUTH_BASE_URL,
     HEADERS,
+    PASSWORD_RESET_REDIRECT_URL,
+    request_password_reset,
     sign_in,
     sign_out,
     sign_up,
 )
+
+
+@patch("auth_client.requests.post")
+def test_request_password_reset_sends_email(mock_post):
+    mock_response = Mock()
+    mock_post.return_value = mock_response
+
+    request_password_reset("laura@example.com")
+
+    mock_post.assert_called_once_with(
+        f"{AUTH_BASE_URL}/recover",
+        headers=HEADERS,
+        params={
+            "redirect_to": PASSWORD_RESET_REDIRECT_URL,
+        },
+        json={"email": "laura@example.com"},
+        timeout=10,
+    )
+
+    mock_response.raise_for_status.assert_called_once_with()
 
 
 @patch("auth_client.requests.post")
