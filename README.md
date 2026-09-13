@@ -59,7 +59,8 @@ What began as a small Python project gradually evolved into a cross-platform app
 - Custom application icon
 - Custom font and graphical interface
 - Italian-language UI
-- Automated tests for the authentication and database clients
+- Automated tests for all Python application modules
+- GitHub Actions CI with 100% statement coverage
 - Multiple private food lists
 - Default list with 22 foods for every new user
 - Create, select, rename, and delete food lists
@@ -130,6 +131,7 @@ The versioned SQL schema and Row Level Security policies are stored in:
 
 ```text
 supabase/migrations/
+```
 
 ---
 
@@ -456,7 +458,13 @@ food_kivy/
 │   └── config.toml
 ├── tests/
 │   ├── test_auth_client.py
-│   └── test_supabase_client.py
+│   ├── test_auth_screen.py
+│   ├── test_food_lists_screen.py
+│   ├── test_food_popup.py
+│   ├── test_main.py
+│   ├── test_signup_screen.py
+│   ├── test_supabase_client.py
+│   └── test_ui_components.py
 ├── .gitignore
 ├── auth_client.py
 ├── auth_screen.py
@@ -544,33 +552,23 @@ python main.py
 
 ## Tests
 
-Run the automated tests with:
+Run the complete test suite with:
 
 ```bash
 python -m pytest
 ```
 
-Run the tests with coverage for the two HTTP client modules:
+Run the tests with coverage:
 
 ```bash
-python -m pytest --cov=auth_client --cov=supabase_client --cov-report=term-missing
+python -m pytest --cov=auth_client --cov=auth_screen --cov=food_lists_screen --cov=food_popup --cov=main --cov=signup_screen --cov=supabase_client --cov=ui_components --cov-report=term-missing --cov-fail-under=100
 ```
 
-The current test suite contains 14 tests covering:
+The current test suite contains 90 tests covering the HTTP clients, authentication and signup screens, main application logic, food-list management, food-management popup, and reusable UI components.
 
-- signup
-- login
-- logout
-- authenticated headers
-- retrieving foods
-- adding foods
-- deleting foods
-- HTTP error handling
-- password reset requests
+The complete Python application currently has 100% statement coverage.
 
-The current tests provide 100% statement coverage for `auth_client.py` and `supabase_client.py`.
-
-This percentage does not represent coverage of the complete Kivy interface.
+Tests run automatically on every push and pull request through GitHub Actions. Kivy interface tests use a virtual display on GitHub's Ubuntu runner.
 
 ---
 
@@ -665,7 +663,6 @@ Potential future versions could include:
 - synchronization after reconnecting
 - animations and additional UI polish
 - additional languages
-- automated Kivy interface tests
 
 ---
 
@@ -763,6 +760,8 @@ The current version includes:
 - account registration
 - email confirmation
 - login and logout
+- password reset by email
+- multiple private food lists
 - authenticated Supabase requests
 - Row Level Security
 - remote food persistence
@@ -772,8 +771,7 @@ The current version includes:
 - Android keyboard support
 - adaptive backgrounds
 - custom application branding
-- 14 automated client tests
-- password reset by email
+- 90 automated tests with 100% statement coverage
 
 The authentication flow and food operations are working correctly on desktop.
 
