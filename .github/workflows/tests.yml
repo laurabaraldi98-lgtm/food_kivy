@@ -37,7 +37,8 @@ jobs:
         run: |
           python -m pytest \
             --cov=auth_client \
-            --cov=supabase_client \
+            --cov=auth_screen \
             --cov=main \
+            --cov=supabase_client \
             --cov-report=term-missing \
             --cov-fail-under=100
