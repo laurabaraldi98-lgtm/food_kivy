@@ -38,6 +38,7 @@ jobs:
           python -m pytest \
             --cov=auth_client \
             --cov=auth_screen \
+            --cov=food_lists_screen \
             --cov=main \
             --cov=signup_screen \
             --cov=supabase_client \
