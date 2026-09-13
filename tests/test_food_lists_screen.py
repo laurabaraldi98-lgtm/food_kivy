@@ -82,15 +82,20 @@ def test_add_colored_background_tracks_widget_size_and_position():
 
 def test_on_pre_enter_reloads_and_renders_lists(screen):
     app = make_app()
+    groups = [{"id": 9, "name": "Famiglia", "owner_id": "user-123"}]
 
     with (
         patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.get_groups", return_value=groups),
         patch.object(screen, "render_lists") as mock_render,
     ):
         screen.selected_list_id = 4
+        screen.status_label.text = "Errore precedente"
         screen.on_pre_enter()
 
     app.reload_food_lists.assert_called_once_with()
+    assert screen.groups == groups
+    assert screen.status_label.text == ""
     assert screen.selected_list_id is None
     mock_render.assert_called_once_with()
 
@@ -492,3 +497,311 @@ def test_logout_from_menu_closes_menu_and_logs_out(screen):
 
     screen.menu.dismiss.assert_called_once_with()
     app.logout.assert_called_once_with()
+
+
+def test_render_shared_list_for_owner(screen):
+    shared = {"id": 2, "name": "Famiglia", "group_id": 9}
+    app = make_app(food_lists=[shared], current_list_id=2)
+    screen.groups = [{"id": 9, "name": "Famiglia", "owner_id": "user-123"}]
+    screen.selected_list_id = 2
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.render_lists()
+
+    texts = {
+        widget.text
+        for widget in screen.list_container.walk()
+        if isinstance(widget, RoundedButton)
+    }
+    assert "*  Famiglia  (condivisa)" in texts
+    assert {"Vedi cibi", "Membri", "Rinomina", "Elimina"} <= texts
+    assert "Abbandona" not in texts
+
+
+def test_render_shared_list_for_member(screen):
+    shared = {"id": 2, "name": "Famiglia", "group_id": 9}
+    app = make_app(food_lists=[shared])
+    screen.groups = [{"id": 9, "name": "Famiglia", "owner_id": "other-user"}]
+    screen.selected_list_id = 2
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.render_lists()
+
+    texts = {
+        widget.text
+        for widget in screen.list_container.walk()
+        if isinstance(widget, RoundedButton)
+    }
+    assert "Famiglia  (condivisa)" in texts
+    assert "Abbandona" in texts
+    assert "Elimina" not in texts
+
+
+def test_get_group_for_list(screen):
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    screen.groups = [group]
+
+    assert screen.get_group_for_list({"id": 1, "name": "Personale"}) is None
+    assert screen.get_group_for_list(
+        {"id": 2, "name": "Famiglia", "group_id": 9}
+    ) == group
+    assert screen.get_group_for_list(
+        {"id": 3, "name": "Sconosciuta", "group_id": 99}
+    ) is None
+
+
+def test_create_shared_list(screen, fake_popup):
+    app = make_app()
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    created = {"id": 3, "name": "Famiglia", "group_id": 9}
+
+    with (
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.create_group", return_value=group) as create_group,
+        patch(
+            "food_lists_screen.create_group_food_list", return_value=created
+        ) as create_list,
+        patch.object(screen, "render_lists") as render,
+    ):
+        screen.open_create_popup(None, shared=True)
+        popup = fake_popup.last
+        find_widget(popup.content, TextInput).text = "  Famiglia  "
+        find_widget(popup.content, RoundedButton,
+                    text="Crea").dispatch("on_release")
+
+    create_group.assert_called_once_with("Famiglia", "user-123", "test-token")
+    create_list.assert_called_once_with("Famiglia", 9, "test-token")
+    assert screen.groups == [group]
+    assert app.food_lists == [created]
+    assert screen.selected_list_id == 3
+    assert popup.dismissed
+    render.assert_called_once_with()
+
+
+def test_create_shared_list_reports_group_error(screen, fake_popup):
+    app = make_app()
+
+    with (
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.create_group", side_effect=RequestException),
+    ):
+        screen.open_create_popup(None, shared=True)
+        popup = fake_popup.last
+        find_widget(popup.content, TextInput).text = "Famiglia"
+        find_widget(popup.content, RoundedButton,
+                    text="Crea").dispatch("on_release")
+
+    assert popup_status(popup).text == "Impossibile creare la lista"
+
+
+@pytest.mark.parametrize("cleanup_fails", [False, True])
+def test_create_shared_list_removes_orphan_group(
+    screen, fake_popup, cleanup_fails
+):
+    app = make_app()
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    cleanup_error = RequestException if cleanup_fails else None
+
+    with (
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.create_group", return_value=group),
+        patch("food_lists_screen.create_group_food_list",
+              side_effect=RequestException),
+        patch("food_lists_screen.delete_group", side_effect=cleanup_error) as cleanup,
+    ):
+        screen.open_create_popup(None, shared=True)
+        popup = fake_popup.last
+        find_widget(popup.content, TextInput).text = "Famiglia"
+        find_widget(popup.content, RoundedButton,
+                    text="Crea").dispatch("on_release")
+
+    cleanup.assert_called_once_with(9, "test-token")
+    assert popup_status(popup).text == "Impossibile creare la lista"
+
+
+def test_open_members_popup_handles_missing_selection_or_group(screen):
+    with patch("food_lists_screen.show_group_members_popup") as show:
+        with patch.object(screen, "get_selected_list", return_value=None):
+            screen.open_members_popup(None)
+        show.assert_not_called()
+
+        with (
+            patch.object(
+                screen,
+                "get_selected_list",
+                return_value={"id": 2, "name": "Famiglia", "group_id": 99},
+            ),
+            patch.object(screen, "get_group_for_list", return_value=None),
+        ):
+            screen.open_members_popup(None)
+
+    assert screen.status_label.text == "Impossibile aprire i membri della lista"
+
+
+def test_open_members_popup(screen):
+    food_list = {"id": 2, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=food_list),
+        patch.object(screen, "get_group_for_list", return_value=group),
+        patch("food_lists_screen.show_group_members_popup") as show,
+    ):
+        screen.open_members_popup(None)
+
+    show.assert_called_once_with(group)
+    assert screen.status_label.text == ""
+
+
+def test_rename_shared_list_updates_group(screen, fake_popup):
+    selected = {"id": 1, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    app = make_app(food_lists=[selected])
+    screen.groups = [group]
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.rename_food_list") as rename_list,
+        patch("food_lists_screen.rename_group") as rename_group,
+        patch.object(screen, "render_lists"),
+    ):
+        screen.open_rename_popup(None)
+        popup = fake_popup.last
+        find_widget(popup.content, TextInput).text = "Amici"
+        find_widget(popup.content, RoundedButton,
+                    text="Salva").dispatch("on_release")
+
+    rename_list.assert_called_once_with(1, "Amici", "test-token")
+    rename_group.assert_called_once_with(9, "Amici", "test-token")
+    assert selected["name"] == group["name"] == "Amici"
+
+
+def test_rename_shared_list_reports_group_error(screen, fake_popup):
+    selected = {"id": 1, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    app = make_app(food_lists=[selected])
+    screen.groups = [group]
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.rename_food_list"),
+        patch("food_lists_screen.rename_group", side_effect=RequestException),
+    ):
+        screen.open_rename_popup(None)
+        popup = fake_popup.last
+        find_widget(popup.content, TextInput).text = "Amici"
+        find_widget(popup.content, RoundedButton,
+                    text="Salva").dispatch("on_release")
+
+    assert popup_status(popup).text == "Impossibile rinominare la lista"
+
+
+def test_delete_shared_list_shows_warning_and_deletes_group(screen, fake_popup):
+    selected = {"id": 1, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    app = make_app(food_lists=[selected], current_list_id=1)
+    screen.groups = [group]
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.delete_group") as delete,
+        patch.object(screen, "render_lists"),
+    ):
+        screen.open_delete_popup(None)
+        popup = fake_popup.last
+        warning = find_widget(popup.content, Label)
+        assert "Tutti i membri perderanno l'accesso" in warning.text
+        find_widget(popup.content, RoundedButton,
+                    text="Elimina").dispatch("on_release")
+
+    delete.assert_called_once_with(9, "test-token")
+    assert screen.groups == []
+    assert app.food_lists == []
+
+
+def test_delete_shared_list_reports_error(screen, fake_popup):
+    selected = {"id": 1, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "user-123"}
+    app = make_app(food_lists=[selected])
+    screen.groups = [group]
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.delete_group", side_effect=RequestException),
+    ):
+        screen.open_delete_popup(None)
+        popup = fake_popup.last
+        find_widget(popup.content, RoundedButton,
+                    text="Elimina").dispatch("on_release")
+
+    assert find_widget(
+        popup.content, Label).text == "Impossibile eliminare la lista"
+
+
+def test_leave_popup_handles_missing_selection_or_group(screen, fake_popup):
+    with patch.object(screen, "get_selected_list", return_value=None):
+        screen.open_leave_popup(None)
+    assert fake_popup.last is None
+
+    selected = {"id": 1, "name": "Famiglia", "group_id": 99}
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch.object(screen, "get_group_for_list", return_value=None),
+    ):
+        screen.open_leave_popup(None)
+    assert screen.status_label.text == "Impossibile abbandonare la lista condivisa"
+
+
+def test_leave_popup_reports_request_error(screen, fake_popup):
+    selected = {"id": 1, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "other-user"}
+    app = make_app(food_lists=[selected], current_list_id=1)
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch.object(screen, "get_group_for_list", return_value=group),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.remove_group_member",
+              side_effect=RequestException),
+    ):
+        screen.open_leave_popup(None)
+        popup = fake_popup.last
+        find_widget(popup.content, RoundedButton,
+                    text="Abbandona").dispatch("on_release")
+
+    assert find_widget(
+        popup.content, Label).text == "Impossibile abbandonare la lista"
+
+
+@pytest.mark.parametrize("has_remaining", [False, True])
+def test_leave_shared_list(screen, fake_popup, has_remaining):
+    selected = {"id": 1, "name": "Famiglia", "group_id": 9}
+    group = {"id": 9, "name": "Famiglia", "owner_id": "other-user"}
+    remaining = {"id": 2, "name": "Personale"}
+    lists = [selected, remaining] if has_remaining else [selected]
+    app = make_app(food_lists=lists, current_list_id=1)
+    screen.groups = [group]
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch.object(screen, "get_group_for_list", return_value=group),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.remove_group_member") as remove,
+        patch.object(screen, "render_lists"),
+    ):
+        screen.open_leave_popup(None)
+        popup = fake_popup.last
+        find_widget(popup.content, RoundedButton,
+                    text="Abbandona").dispatch("on_release")
+
+    remove.assert_called_once_with(9, "user-123", "test-token")
+    assert selected not in app.food_lists
+    assert screen.groups == []
+    if has_remaining:
+        app.select_food_list.assert_called_once_with(remaining)
+    else:
+        app.clear_active_food_list.assert_called_once_with()
