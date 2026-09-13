@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email confermata</title>
+    <title>Food App</title>
 
     <style>
         body {
@@ -33,21 +33,179 @@
         }
 
         p {
-            margin-bottom: 0;
             font-size: 18px;
             line-height: 1.5;
+        }
+
+        form {
+            display: none;
+            gap: 14px;
+        }
+
+        input,
+        button {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 46px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 16px;
+        }
+
+        input {
+            border: 1px solid #15977f;
+        }
+
+        button {
+            border: 0;
+            background-color: #1a9a82;
+            color: white;
+            cursor: pointer;
+        }
+
+        #status {
+            min-height: 24px;
+            font-size: 15px;
         }
     </style>
 </head>
 
 <body>
     <main>
-        <h1>Email confermata!</h1>
-        <p>
-            Il tuo account è pronto.
-            Ora puoi tornare all'app e accedere.
-        </p>
+        <section id="confirmation-message">
+            <h1>Email confermata!</h1>
+            <p>
+                Il tuo account è pronto.
+                Ora puoi tornare all'app e accedere.
+            </p>
+        </section>
+
+        <form id="reset-form">
+            <h1>Nuova password</h1>
+
+            <input id="password" type="password" minlength="6" placeholder="Nuova password" required>
+
+            <input id="password-confirmation" type="password" minlength="6" placeholder="Ripeti la nuova password"
+                required>
+
+            <button type="submit">
+                Salva nuova password
+            </button>
+
+            <p id="status"></p>
+        </form>
     </main>
+
+    <script>
+        const SUPABASE_URL =
+            "https://rievhxmavsvnoyormnfq.supabase.co";
+
+        const SUPABASE_KEY =
+            "sb_publishable_DjhuWqEN4s4HXBOLIWHlNg_e5z82-b4";
+
+        const query = new URLSearchParams(
+            window.location.search
+        );
+
+        const fragment = new URLSearchParams(
+            window.location.hash.substring(1)
+        );
+
+        const accessToken = fragment.get("access_token");
+
+        const isPasswordReset =
+            query.get("mode") === "password-reset" ||
+            fragment.get("type") === "recovery";
+
+        const confirmationMessage = document.getElementById(
+            "confirmation-message"
+        );
+
+        const resetForm = document.getElementById(
+            "reset-form"
+        );
+
+        const status = document.getElementById(
+            "status"
+        );
+
+        if (isPasswordReset) {
+            confirmationMessage.style.display = "none";
+            resetForm.style.display = "grid";
+
+            if (!accessToken) {
+                status.textContent =
+                    "Link non valido o scaduto. Richiedi una nuova email.";
+            }
+        }
+
+        resetForm.addEventListener(
+            "submit",
+            async (event) => {
+                event.preventDefault();
+
+                const password = document.getElementById(
+                    "password"
+                ).value;
+
+                const confirmation = document.getElementById(
+                    "password-confirmation"
+                ).value;
+
+                if (password !== confirmation) {
+                    status.textContent =
+                        "Le password non coincidono.";
+                    return;
+                }
+
+                status.textContent =
+                    "Salvataggio in corso...";
+
+                try {
+                    const response = await fetch(
+                        `${SUPABASE_URL}/auth/v1/user`,
+                        {
+                            method: "PUT",
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization":
+                                    `Bearer ${accessToken}`,
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body: JSON.stringify({
+                                password: password
+                            })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(
+                            "Password update failed"
+                        );
+                    }
+
+                    resetForm.innerHTML = `
+                        <h1>Password aggiornata!</h1>
+                        <p>
+                            Ora puoi tornare all'app
+                            e accedere.
+                        </p>
+                    `;
+
+                    window.history.replaceState(
+                        {},
+                        document.title,
+                        window.location.pathname
+                    );
+                } catch (error) {
+                    status.textContent =
+                        "Impossibile aggiornare la password. " +
+                        "Richiedi una nuova email e riprova.";
+                }
+            }
+        );
+    </script>
 </body>
 
 </html>

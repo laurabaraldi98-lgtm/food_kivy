@@ -37,6 +37,7 @@ What began as a small Python project gradually evolved into a cross-platform app
 - User registration with email and password
 - Email confirmation through Supabase
 - User login and logout
+- Password reset by email
 - Random food suggestion
 - Add new foods
 - Remove existing foods
@@ -555,7 +556,7 @@ Run the tests with coverage for the two HTTP client modules:
 python -m pytest --cov=auth_client --cov=supabase_client --cov-report=term-missing
 ```
 
-The current test suite contains 13 tests covering:
+The current test suite contains 14 tests covering:
 
 - signup
 - login
@@ -565,6 +566,7 @@ The current test suite contains 13 tests covering:
 - adding foods
 - deleting foods
 - HTTP error handling
+- password reset requests
 
 The current tests provide 100% statement coverage for `auth_client.py` and `supabase_client.py`.
 
@@ -770,7 +772,8 @@ The current version includes:
 - Android keyboard support
 - adaptive backgrounds
 - custom application branding
-- nine automated client tests
+- 14 automated client tests
+- password reset by email
 
 The authentication flow and food operations are working correctly on desktop.
 
