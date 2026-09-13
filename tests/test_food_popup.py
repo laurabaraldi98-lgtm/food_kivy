@@ -2,13 +2,13 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
-from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from requests import RequestException
 
 from food_popup import show_food_popup
+from ui_components import RoundedButton
 
 
 class FakePopup:
@@ -101,25 +101,20 @@ def get_controls(popup):
             Label,
             text="",
         ),
-        add_input=find_widget(
+        food_input=find_widget(
             popup.content,
             TextInput,
-            hint_text="Scrivi cibo da aggiungere",
-        ),
-        delete_input=find_widget(
-            popup.content,
-            TextInput,
-            hint_text="Scrivi cibo da eliminare",
+            hint_text="Nome del cibo",
         ),
         add_button=find_widget(
             popup.content,
-            Button,
-            text="Aggiungi cibo",
+            RoundedButton,
+            text="Aggiungi",
         ),
         delete_button=find_widget(
             popup.content,
-            Button,
-            text="Elimina cibo",
+            RoundedButton,
+            text="Elimina",
         ),
     )
 
@@ -147,13 +142,14 @@ def test_popup_builds_empty_list_and_updates_layout(
     )
     scroll.width += 1
 
-    add_input = find_widget(
+    food_input = find_widget(
         popup.content,
         TextInput,
-        hint_text="Scrivi cibo da aggiungere",
+        hint_text="Nome del cibo",
     )
-    add_input.focus = True
-    add_input.focus = False
+    with patch("food_popup.platform", "android"):
+        food_input.focus = True
+        food_input.focus = False
 
     assert any(
         delay == 0.2
@@ -180,7 +176,7 @@ def test_add_food_rejects_duplicate(
         make_app(["Pasta"])
     )
     controls = get_controls(popup)
-    controls.add_input.text = "pasta"
+    controls.food_input.text = "pasta"
 
     controls.add_button.dispatch("on_press")
 
@@ -188,7 +184,7 @@ def test_add_food_rejects_duplicate(
         controls.status.text
         == "Pasta è già nella lista"
     )
-    assert controls.add_input.text == ""
+    assert controls.food_input.text == ""
 
     fake_kivy_services.run_status_callback()
 
@@ -199,7 +195,7 @@ def test_add_food_updates_remote_and_local_list():
     app = make_app(["Zuppa"])
     popup = open_popup(app)
     controls = get_controls(popup)
-    controls.add_input.text = "pizza"
+    controls.food_input.text = "pizza"
 
     with patch(
         "food_popup.add_food"
@@ -214,13 +210,13 @@ def test_add_food_updates_remote_and_local_list():
     assert app.food == ["Pizza", "Zuppa"]
     assert controls.list_label.text == "Pizza\nZuppa"
     assert controls.status.text == "Aggiunto: Pizza"
-    assert controls.add_input.text == ""
+    assert controls.food_input.text == ""
 
 
 def test_add_food_displays_request_error():
     popup = open_popup(make_app())
     controls = get_controls(popup)
-    controls.add_input.text = "Pizza"
+    controls.food_input.text = "Pizza"
 
     with patch(
         "food_popup.add_food",
@@ -255,7 +251,7 @@ def test_delete_food_reports_missing_food(
         make_app(["Pasta"])
     )
     controls = get_controls(popup)
-    controls.delete_input.text = "Pizza"
+    controls.food_input.text = "Pizza"
 
     controls.delete_button.dispatch("on_press")
 
@@ -263,7 +259,7 @@ def test_delete_food_reports_missing_food(
         controls.status.text
         == "Pizza non è nella lista"
     )
-    assert controls.delete_input.text == ""
+    assert controls.food_input.text == ""
 
     fake_kivy_services.run_status_callback()
 
@@ -274,7 +270,7 @@ def test_delete_food_updates_remote_and_local_list():
     app = make_app(["Pasta", "Pizza"])
     popup = open_popup(app)
     controls = get_controls(popup)
-    controls.delete_input.text = "pAsTa"
+    controls.food_input.text = "pAsTa"
 
     with patch(
         "food_popup.delete_food"
@@ -289,7 +285,7 @@ def test_delete_food_updates_remote_and_local_list():
     assert app.food == ["Pizza"]
     assert controls.list_label.text == "Pizza"
     assert controls.status.text == "Eliminato: Pasta"
-    assert controls.delete_input.text == ""
+    assert controls.food_input.text == ""
 
 
 def test_delete_food_displays_request_error():
@@ -297,7 +293,7 @@ def test_delete_food_displays_request_error():
         make_app(["Pasta"])
     )
     controls = get_controls(popup)
-    controls.delete_input.text = "Pasta"
+    controls.food_input.text = "Pasta"
 
     with patch(
         "food_popup.delete_food",
