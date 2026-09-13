@@ -26,6 +26,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install requests kivy pytest pytest-cov
 
+      - name: Install virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth
+
       - name: Create test configuration
         run: |
           printf '%s\n' \
@@ -35,13 +40,13 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          python -m pytest \
-          --cov=auth_client \
-          --cov=auth_screen \
-          --cov=food_lists_screen \
-          --cov=food_popup \
-          --cov=main \
-          --cov=signup_screen \
-          --cov=supabase_client \
-          --cov-report=term-missing \
-          --cov-fail-under=100
+          xvfb-run -a python -m pytest \
+            --cov=auth_client \
+            --cov=auth_screen \
+            --cov=food_lists_screen \
+            --cov=food_popup \
+            --cov=main \
+            --cov=signup_screen \
+            --cov=supabase_client \
+            --cov-report=term-missing \
+            --cov-fail-under=100
