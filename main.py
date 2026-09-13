@@ -22,7 +22,7 @@ from ui_components import MenuButton, RoundedButton
 if platform not in ("android", "ios"):
     Window.size = (360, 640)
 
-if platform == "android":
+if platform == "android":  # pragma: no cover
     Window.softinput_mode = "below_target"
 
 Window.clearcolor = (0.70, 0.92, 0.88, 1)
@@ -292,4 +292,5 @@ class FoodApp(App):
         )
 
 
-FoodApp().run()
+if __name__ == "__main__":  # pragma: no cover
+    FoodApp().run()

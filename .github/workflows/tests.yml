@@ -38,5 +38,6 @@ jobs:
           python -m pytest \
             --cov=auth_client \
             --cov=supabase_client \
+            --cov=main \
             --cov-report=term-missing \
             --cov-fail-under=100
