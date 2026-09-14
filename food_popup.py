@@ -2,15 +2,16 @@ from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
+from kivy.utils import platform
 from requests import RequestException
 
 from supabase_client import add_food, delete_food
+from ui_components import RoundedButton
 
 
 def show_food_popup(app):
@@ -85,14 +86,10 @@ def show_food_popup(app):
         spacing=form_spacing,
         size_hint_y=None,
     )
-    form_layout.height = (
-        control_height * 4
-        + status_height
-        + form_spacing * 4
-    )
+    form_layout.height = control_height * 2 + status_height + form_spacing * 2
 
-    add_input = TextInput(
-        hint_text="Scrivi cibo da aggiungere",
+    food_input = TextInput(
+        hint_text="Nome del cibo",
         multiline=False,
         font_size=sp(15),
         size_hint_y=None,
@@ -100,34 +97,29 @@ def show_food_popup(app):
         padding=(dp(6), dp(6)),
     )
 
-    add_button = Button(
-        text="Aggiungi cibo",
-        font_size=sp(16),
+    action_buttons = BoxLayout(
+        orientation="horizontal",
+        spacing=dp(8),
         size_hint_y=None,
         height=control_height,
-        background_normal="",
-        background_color=(0.22, 0.68, 0.48, 1),
-        color=(1, 1, 1, 1),
     )
 
-    delete_input = TextInput(
-        hint_text="Scrivi cibo da eliminare",
-        multiline=False,
+    add_button = RoundedButton(
+        text="Aggiungi",
         font_size=sp(15),
-        size_hint_y=None,
-        height=control_height,
-        padding=(dp(6), dp(6)),
-    )
-
-    delete_button = Button(
-        text="Elimina cibo",
-        font_size=sp(16),
-        size_hint_y=None,
-        height=control_height,
-        background_normal="",
-        background_color=(0.55, 0.20, 0.20, 1),
+        my_color=(0.10, 0.55, 0.45, 1),
         color=(1, 1, 1, 1),
     )
+
+    delete_button = RoundedButton(
+        text="Elimina",
+        font_size=sp(15),
+        my_color=(0.65, 0.18, 0.18, 1),
+        color=(1, 1, 1, 1),
+    )
+
+    action_buttons.add_widget(add_button)
+    action_buttons.add_widget(delete_button)
 
     status_label = Label(
         text="",
@@ -137,10 +129,8 @@ def show_food_popup(app):
         height=status_height,
     )
 
-    form_layout.add_widget(add_input)
-    form_layout.add_widget(add_button)
-    form_layout.add_widget(delete_input)
-    form_layout.add_widget(delete_button)
+    form_layout.add_widget(food_input)
+    form_layout.add_widget(action_buttons)
     form_layout.add_widget(status_label)
     content_column.add_widget(form_layout)
     content_column.add_widget(
@@ -151,7 +141,7 @@ def show_food_popup(app):
     popup_layout.add_widget(content_scroll)
 
     def scroll_to_input(instance, focused):
-        if not focused:
+        if platform != "android" or not focused:
             return
 
         Clock.schedule_once(
@@ -163,8 +153,7 @@ def show_food_popup(app):
             0.2,
         )
 
-    add_input.bind(focus=scroll_to_input)
-    delete_input.bind(focus=scroll_to_input)
+    food_input.bind(focus=scroll_to_input)
 
     def clear_status(dt):
         status_label.text = ""
@@ -173,7 +162,7 @@ def show_food_popup(app):
         label.text = "\n".join(app.food) or "Lista vuota"
 
     def add_food_from_popup(instance):
-        new_food = add_input.text.strip()
+        new_food = food_input.text.strip()
 
         if not new_food:
             status_label.text = "Scrivi un cibo da aggiungere"
@@ -203,10 +192,10 @@ def show_food_popup(app):
             status_label.text = f"Aggiunto: {new_food}"
 
         Clock.schedule_once(clear_status, 3)
-        add_input.text = ""
+        food_input.text = ""
 
     def delete_food_from_popup(instance):
-        typed_name = delete_input.text.strip()
+        typed_name = food_input.text.strip()
 
         if not typed_name:
             status_label.text = "Scrivi un cibo da eliminare"
@@ -239,7 +228,7 @@ def show_food_popup(app):
             status_label.text = f"Eliminato: {food_to_delete}"
 
         Clock.schedule_once(clear_status, 3)
-        delete_input.text = ""
+        food_input.text = ""
 
     add_button.bind(on_press=add_food_from_popup)
     delete_button.bind(on_press=delete_food_from_popup)

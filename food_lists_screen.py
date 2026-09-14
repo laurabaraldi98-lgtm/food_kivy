@@ -13,13 +13,19 @@ from kivy.uix.textinput import TextInput
 from requests import RequestException
 
 from food_popup import show_food_popup
+from group_members_popup import show_group_members_popup
 from supabase_client import (
     create_food_list,
+    create_group,
+    create_group_food_list,
     delete_food_list,
+    delete_group,
+    get_groups,
+    remove_group_member,
     rename_food_list,
+    rename_group,
 )
 from ui_components import MenuButton, RoundedButton
-
 
 POPUP_COLOR = (0.70, 0.92, 0.88, 1)
 TEXT_COLOR = (0.02, 0.35, 0.28, 1)
@@ -47,6 +53,7 @@ class FoodListsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.selected_list_id = None
+        self.groups = []
         self.build_interface()
 
     def build_interface(self):
@@ -115,15 +122,41 @@ class FoodListsScreen(Screen):
             pos_hint={"center_x": 0.5, "y": 0.08},
         )
 
-        create_button = RoundedButton(
-            text="+ Nuova lista",
+        create_buttons = BoxLayout(
+            orientation="horizontal",
+            spacing=dp(8),
             size_hint_y=None,
             height=dp(48),
-            font_size=sp(17),
+        )
+
+        personal_button = RoundedButton(
+            text="+ Personale",
+            font_size=sp(15),
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
-        create_button.bind(on_release=self.open_create_popup)
+        personal_button.bind(
+            on_release=lambda instance: self.open_create_popup(
+                instance,
+                shared=False,
+            )
+        )
+
+        shared_button = RoundedButton(
+            text="+ Condivisa",
+            font_size=sp(15),
+            my_color=(0.25, 0.55, 0.70, 1),
+            color=(1, 1, 1, 1),
+        )
+        shared_button.bind(
+            on_release=lambda instance: self.open_create_popup(
+                instance,
+                shared=True,
+            )
+        )
+
+        create_buttons.add_widget(personal_button)
+        create_buttons.add_widget(shared_button)
 
         self.status_label = Label(
             text="",
@@ -144,7 +177,7 @@ class FoodListsScreen(Screen):
         )
         scroll.add_widget(self.list_container)
 
-        content.add_widget(create_button)
+        content.add_widget(create_buttons)
         content.add_widget(self.status_label)
         content.add_widget(scroll)
         root.add_widget(content)
@@ -155,10 +188,12 @@ class FoodListsScreen(Screen):
 
         try:
             app.reload_food_lists()
+            self.groups = get_groups(app.get_access_token())
         except RequestException:
             self.status_label.text = "Impossibile caricare le liste"
             return
 
+        self.status_label.text = ""
         self.selected_list_id = None
         self.render_lists()
 
@@ -179,6 +214,12 @@ class FoodListsScreen(Screen):
             return
 
         for food_list in app.food_lists:
+            group = self.get_group_for_list(food_list)
+            is_shared = food_list.get("group_id") is not None
+            is_owner = bool(
+                group
+                and group["owner_id"] == app.get_user_id()
+            )
             card = BoxLayout(
                 orientation="vertical",
                 spacing=dp(6),
@@ -188,13 +229,20 @@ class FoodListsScreen(Screen):
 
             is_active = food_list["id"] == app.current_list_id
             is_selected = food_list["id"] == self.selected_list_id
-            card.height = dp(104 if is_selected else 54)
+            if is_selected and is_shared:
+                card.height = dp(154)
+            else:
+                card.height = dp(104 if is_selected else 54)
+
+            displayed_name = food_list["name"]
+            if is_shared:
+                displayed_name += "  (condivisa)"
 
             list_button = RoundedButton(
                 text=(
-                    f"*  {food_list['name']}"
+                    f"*  {displayed_name}"
                     if is_active
-                    else food_list["name"]
+                    else displayed_name
                 ),
                 size_hint_y=None,
                 height=dp(48),
@@ -213,7 +261,7 @@ class FoodListsScreen(Screen):
             card.add_widget(list_button)
 
             if is_selected:
-                actions = BoxLayout(
+                primary_actions = BoxLayout(
                     orientation="horizontal",
                     spacing=dp(6),
                     size_hint_y=None,
@@ -228,6 +276,27 @@ class FoodListsScreen(Screen):
                 )
                 view_button.bind(on_release=self.open_selected_foods)
 
+                primary_actions.add_widget(view_button)
+
+                if is_shared:
+                    members_button = RoundedButton(
+                        text="Membri",
+                        font_size=sp(13),
+                        my_color=(0.55, 0.42, 0.70, 1),
+                        color=(1, 1, 1, 1),
+                    )
+                    members_button.bind(
+                        on_release=self.open_members_popup
+                    )
+                    primary_actions.add_widget(members_button)
+
+                secondary_actions = BoxLayout(
+                    orientation="horizontal",
+                    spacing=dp(6),
+                    size_hint_y=None,
+                    height=dp(44),
+                )
+
                 rename_button = RoundedButton(
                     text="Rinomina",
                     font_size=sp(13),
@@ -236,18 +305,34 @@ class FoodListsScreen(Screen):
                 )
                 rename_button.bind(on_release=self.open_rename_popup)
 
-                delete_button = RoundedButton(
-                    text="Elimina",
+                final_button = RoundedButton(
+                    text=(
+                        "Abbandona"
+                        if is_shared and not is_owner
+                        else "Elimina"
+                    ),
                     font_size=sp(13),
                     my_color=(0.65, 0.18, 0.18, 1),
                     color=(1, 1, 1, 1),
                 )
-                delete_button.bind(on_release=self.open_delete_popup)
+                if is_shared and not is_owner:
+                    final_button.bind(
+                        on_release=self.open_leave_popup
+                    )
+                else:
+                    final_button.bind(
+                        on_release=self.open_delete_popup
+                    )
 
-                actions.add_widget(view_button)
-                actions.add_widget(rename_button)
-                actions.add_widget(delete_button)
-                card.add_widget(actions)
+                if is_shared:
+                    secondary_actions.add_widget(rename_button)
+                    secondary_actions.add_widget(final_button)
+                    card.add_widget(primary_actions)
+                    card.add_widget(secondary_actions)
+                else:
+                    primary_actions.add_widget(rename_button)
+                    primary_actions.add_widget(final_button)
+                    card.add_widget(primary_actions)
 
             self.list_container.add_widget(card)
 
@@ -280,27 +365,43 @@ class FoodListsScreen(Screen):
             None,
         )
 
-    def open_create_popup(self, instance):
+    def get_group_for_list(self, food_list):
+        group_id = food_list.get("group_id")
+
+        if group_id is None:
+            return None
+
+        return next(
+            (
+                group
+                for group in self.groups
+                if group["id"] == group_id
+            ),
+            None,
+        )
+
+    def open_create_popup(self, instance, shared=False):
+        self.status_label.text = ""
         layout = BoxLayout(
             orientation="vertical",
             spacing=dp(7),
-            padding=(
-                dp(14),
-                dp(10),
-                dp(14),
-                dp(2),
-            ),
+            padding=(dp(14), dp(10), dp(14), dp(2)),
         )
         add_colored_background(layout)
 
         name_input = TextInput(
-            hint_text="Nome nuova lista",
+            hint_text=(
+                "Nome lista condivisa"
+                if shared
+                else "Nome lista personale"
+            ),
             multiline=False,
             size_hint_y=None,
             height=dp(40),
             font_size=sp(15),
             padding=(dp(7), dp(7)),
         )
+
         status = Label(
             text="",
             size_hint_y=None,
@@ -308,11 +409,16 @@ class FoodListsScreen(Screen):
             font_size=sp(12),
             color=(0.55, 0.15, 0.15, 1),
         )
+
         create_button = RoundedButton(
             text="Crea",
             size_hint_y=None,
             height=dp(42),
-            my_color=(0.10, 0.55, 0.45, 1),
+            my_color=(
+                (0.25, 0.55, 0.70, 1)
+                if shared
+                else (0.10, 0.55, 0.45, 1)
+            ),
             color=(1, 1, 1, 1),
         )
 
@@ -321,7 +427,11 @@ class FoodListsScreen(Screen):
         layout.add_widget(create_button)
 
         popup = Popup(
-            title="Crea nuova lista",
+            title=(
+                "Crea lista condivisa"
+                if shared
+                else "Crea lista personale"
+            ),
             title_size=sp(19),
             content=layout,
             size_hint=(0.78, None),
@@ -348,22 +458,49 @@ class FoodListsScreen(Screen):
                 status.text = "Esiste già una lista con questo nome"
                 return
 
+            created_group = None
+
             try:
-                created_list = create_food_list(
-                    list_name,
-                    app.get_user_id(),
-                    app.get_access_token(),
-                )
-                app.food_lists.append(created_list)
-                app.select_food_list(created_list)
+                if shared:
+                    created_group = create_group(
+                        list_name,
+                        app.get_user_id(),
+                        app.get_access_token(),
+                    )
+                    created_list = create_group_food_list(
+                        list_name,
+                        created_group["id"],
+                        app.get_access_token(),
+                    )
+                else:
+                    created_list = create_food_list(
+                        list_name,
+                        app.get_user_id(),
+                        app.get_access_token(),
+                    )
             except RequestException:
+                if created_group:
+                    try:
+                        delete_group(
+                            created_group["id"],
+                            app.get_access_token(),
+                        )
+                    except RequestException:
+                        pass
+
                 status.text = "Impossibile creare la lista"
                 return
 
-            self.selected_list_id = None
+            if created_group:
+                self.groups.append(created_group)
+
+            app.food_lists.append(created_list)
+            app.select_food_list(created_list)
+            self.selected_list_id = created_list["id"]
             self.status_label.text = ""
-            popup.dismiss()
+            status.text = ""
             self.render_lists()
+            popup.dismiss()
 
         create_button.bind(on_release=create_list)
         popup.open()
@@ -373,6 +510,21 @@ class FoodListsScreen(Screen):
             return
 
         show_food_popup(App.get_running_app())
+
+    def open_members_popup(self, instance):
+        food_list = self.get_selected_list()
+
+        if not food_list:
+            return
+
+        group = self.get_group_for_list(food_list)
+
+        if not group:
+            self.status_label.text = "Impossibile aprire i membri della lista"
+            return
+
+        self.status_label.text = ""
+        show_group_members_popup(group)
 
     def open_rename_popup(self, instance):
         food_list = self.get_selected_list()
@@ -452,11 +604,22 @@ class FoodListsScreen(Screen):
                     new_name,
                     app.get_access_token(),
                 )
+
+                group = self.get_group_for_list(food_list)
+                if group:
+                    rename_group(
+                        group["id"],
+                        new_name,
+                        app.get_access_token(),
+                    )
             except RequestException:
                 status.text = "Impossibile rinominare la lista"
                 return
 
             food_list["name"] = new_name
+            group = self.get_group_for_list(food_list)
+            if group:
+                group["name"] = new_name
             if app.current_list_id == food_list["id"]:
                 app.current_list_name = new_name
                 app.active_list_label.text = f"Lista attiva: {new_name}"
@@ -481,8 +644,16 @@ class FoodListsScreen(Screen):
         add_colored_background(layout)
         message = Label(
             text=(
-                f"Eliminare la lista '{food_list['name']}'?\n"
-                "Verranno eliminati anche i suoi cibi."
+                (
+                    f"Eliminare la lista condivisa '{food_list['name']}'?\n"
+                    "Verranno eliminati anche tutti i suoi cibi.\n"
+                    "Tutti i membri perderanno l'accesso."
+                )
+                if food_list.get("group_id") is not None
+                else (
+                    f"Eliminare la lista '{food_list['name']}'?\n"
+                    "Verranno eliminati anche tutti i suoi cibi."
+                )
             ),
             color=(0.08, 0.25, 0.20, 1),
         )
@@ -521,12 +692,19 @@ class FoodListsScreen(Screen):
 
         def confirm_deletion(button):
             app = App.get_running_app()
+            group = self.get_group_for_list(food_list)
 
             try:
-                delete_food_list(
-                    food_list["id"],
-                    app.get_access_token(),
-                )
+                if group:
+                    delete_group(
+                        group["id"],
+                        app.get_access_token(),
+                    )
+                else:
+                    delete_food_list(
+                        food_list["id"],
+                        app.get_access_token(),
+                    )
             except RequestException:
                 message.text = "Impossibile eliminare la lista"
                 return
@@ -536,6 +714,13 @@ class FoodListsScreen(Screen):
                 for existing in app.food_lists
                 if existing["id"] != food_list["id"]
             ]
+
+            if group:
+                self.groups = [
+                    existing
+                    for existing in self.groups
+                    if existing["id"] != group["id"]
+                ]
 
             if app.current_list_id == food_list["id"]:
                 if app.food_lists:
@@ -549,6 +734,105 @@ class FoodListsScreen(Screen):
 
         cancel_button.bind(on_release=popup.dismiss)
         confirm_button.bind(on_release=confirm_deletion)
+        popup.open()
+
+    def open_leave_popup(self, instance):
+        food_list = self.get_selected_list()
+
+        if not food_list:
+            return
+
+        group = self.get_group_for_list(food_list)
+
+        if not group:
+            self.status_label.text = "Impossibile abbandonare la lista condivisa"
+            return
+
+        layout = BoxLayout(
+            orientation="vertical",
+            spacing=dp(12),
+            padding=dp(12),
+        )
+        add_colored_background(layout)
+
+        message = Label(
+            text=(
+                f"Abbandonare la lista '{food_list['name']}'?\n"
+                "Non potrai più vedere o modificare i suoi cibi."
+            ),
+            color=(0.08, 0.25, 0.20, 1),
+        )
+
+        buttons = BoxLayout(
+            orientation="horizontal",
+            spacing=dp(8),
+            size_hint_y=None,
+            height=dp(48),
+        )
+        cancel_button = RoundedButton(
+            text="Annulla",
+            my_color=(0.40, 0.40, 0.40, 1),
+            color=(1, 1, 1, 1),
+        )
+        confirm_button = RoundedButton(
+            text="Abbandona",
+            my_color=(0.65, 0.18, 0.18, 1),
+            color=(1, 1, 1, 1),
+        )
+
+        buttons.add_widget(cancel_button)
+        buttons.add_widget(confirm_button)
+        layout.add_widget(message)
+        layout.add_widget(buttons)
+
+        popup = Popup(
+            title="Abbandona lista condivisa",
+            title_size=sp(19),
+            content=layout,
+            size_hint=(0.80, None),
+            height=dp(210),
+            background="",
+            background_color=POPUP_COLOR,
+            title_color=TEXT_COLOR,
+            separator_color=(0.10, 0.55, 0.45, 1),
+        )
+
+        def confirm_leave(button):
+            app = App.get_running_app()
+
+            try:
+                remove_group_member(
+                    group["id"],
+                    app.get_user_id(),
+                    app.get_access_token(),
+                )
+            except RequestException:
+                message.text = "Impossibile abbandonare la lista"
+                return
+
+            app.food_lists = [
+                existing
+                for existing in app.food_lists
+                if existing["id"] != food_list["id"]
+            ]
+            self.groups = [
+                existing
+                for existing in self.groups
+                if existing["id"] != group["id"]
+            ]
+
+            if app.current_list_id == food_list["id"]:
+                if app.food_lists:
+                    app.select_food_list(app.food_lists[0])
+                else:
+                    app.clear_active_food_list()
+
+            self.selected_list_id = None
+            popup.dismiss()
+            self.render_lists()
+
+        cancel_button.bind(on_release=popup.dismiss)
+        confirm_button.bind(on_release=confirm_leave)
         popup.open()
 
     def go_home_from_menu(self, instance):
