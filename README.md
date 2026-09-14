@@ -1,14 +1,24 @@
 # Food App
 
-A responsive food suggestion app built with Python and Kivy for desktop and Android.
+[![Python tests](https://github.com/laurabaraldi98-lgtm/food_kivy/actions/workflows/tests.yml/badge.svg)](https://github.com/laurabaraldi98-lgtm/food_kivy/actions/workflows/tests.yml)
 
-The app solves a simple everyday problem: deciding what to eat.
+A responsive food suggestion application built with Python and Kivy for desktop and Android.
 
-Users can create an account, sign in, maintain a list of foods, add or remove items, and let the app randomly choose one. The list is stored remotely in Supabase, so changes persist between sessions.
-
-Supabase Authentication protects access to the application, while Row Level Security prevents anonymous users from accessing the food database.
+Food App helps users decide what to eat by selecting a random item from one of their food lists. Users can create personal lists or share lists with other registered users. All data is stored remotely in Supabase and protected with PostgreSQL Row Level Security.
 
 The interface is currently in Italian.
+
+---
+
+## Screenshots
+
+| Login | Home |
+| :---: | :---: |
+| <img src="screenshots/login.png" alt="Food App login screen" width="320"> | <img src="screenshots/home.png" alt="Food App home screen" width="320"> |
+
+| Personal and shared lists | Food management |
+| :---: | :---: |
+| <img src="screenshots/food-lists.png" alt="Personal and shared food lists" width="320"> | <img src="screenshots/food-popup.png" alt="Food management popup" width="320"> |
 
 ---
 
@@ -26,108 +36,281 @@ Usually followed by:
 
 Instead of spending time trying to decide, I built a small application that makes the choice automatically.
 
-The original idea was intentionally simple: keep a list of foods you actually eat, press a button, and let the app pick one.
+The original idea was intentionally simple: keep a list of foods you actually eat, press a button, and let the app select one.
 
-What began as a small Python project gradually evolved into a cross-platform application involving remote persistence, REST API communication, user authentication, database security, Android packaging, responsive UI design, mobile keyboard handling, automated tests, CI builds, and debugging across different physical devices.
+What began as a local Python project gradually evolved into a cross-platform application involving:
+
+- a responsive graphical interface;
+- remote data persistence;
+- REST API communication;
+- user authentication;
+- personal and shared data;
+- PostgreSQL Row Level Security;
+- Android packaging;
+- automated testing;
+- continuous integration.
 
 ---
 
 ## Features
 
+### Authentication
+
 - User registration with email and password
 - Email confirmation through Supabase
 - User login and logout
 - Password reset by email
-- Random food suggestion
-- Add new foods
-- Remove existing foods
-- Persistent food list stored in Supabase
-- Supabase REST API integration
-- Authenticated database requests
-- Row Level Security on the `food_lists` and `foods` tables
-- Responsive Kivy interface
-- Reusable rounded buttons and menu button
-- Hamburger menu with logout action
-- Density-independent widget sizing with `dp`
-- Scalable font sizing with `sp`
-- Desktop support
-- Android support
-- Portrait mobile layout
+- Authenticated API requests using access tokens
+
+### Personal food lists
+
+- Default list containing 22 foods for every new user
+- Multiple personal lists
+- Create, select, rename, and delete lists
+- Separate foods for every list
+- Automatic selection of an available list after login
+- Clear indication of the currently active list
+
+### Shared food lists
+
+- Create a list shared with other registered users
+- Add members by email address
+- View the members of a shared list
+- Remove members from a shared list
+- Shared access to the same foods
+- Owner and member roles
+- Members can leave a shared list
+- Only the owner can delete a shared list
+
+### Food management
+
+- View all foods in the active list
+- Add foods
+- Remove foods
+- Case-insensitive duplicate detection
+- Random food selection
+- Immediate persistence in Supabase
+- Shared changes visible to every authorized member
+
+### Interface
+
+- Responsive Kivy layouts
+- Reusable rounded buttons
+- Custom hamburger menu button
+- Scrollable food-list screen
 - Scrollable food-management popup
-- Android soft-keyboard handling
-- Adaptive background selection for different screen aspect ratios
-- Custom application icon
-- Custom font and graphical interface
-- Italian-language UI
-- Automated tests for all Python application modules
-- GitHub Actions CI with 100% statement coverage
-- Multiple private food lists
-- Default list with 22 foods for every new user
-- Create, select, rename, and delete food lists
-- Dedicated scrollable list-management screen
+- One input field for adding and deleting foods
+- Side-by-side add and delete buttons
+- Density-independent dimensions with `dp`
+- Scalable text sizes with `sp`
+- Adaptive backgrounds
+- Android software-keyboard handling
+- Custom font, illustrations, and application icon
+- Desktop and Android support
+
+### Testing and automation
+
+- 131 automated tests
+- 100% statement coverage
+- Tests for every Python application module
+- GitHub Actions CI on pushes and pull requests
+- Headless Kivy testing with Xvfb
+- Automated Android build workflow
 - Versioned PostgreSQL migrations
 
 ---
 
 ## How It Works
 
-When the application starts, it displays the login screen.
+When the application starts, the login screen is displayed.
 
-Users can sign in with an existing account or open a separate registration screen to create a new one.
+Users can:
 
-New accounts receive a confirmation email from Supabase. The confirmation link redirects to a small responsive page hosted with GitHub Pages:
+- sign in with an existing account;
+- open the registration screen;
+- request a password-reset email.
+
+New accounts can receive a confirmation email through Supabase. Authentication redirects are handled by responsive pages hosted with GitHub Pages:
 
 ```text
 https://laurabaraldi98-lgtm.github.io/food_kivy/
 ```
 
-After a successful login, Supabase returns a session containing an access token. The application stores the session while it is running and loads the current food list from the Supabase `foods` table.
+After a successful login, Supabase returns a session containing an access token.
 
-Authentication logic is isolated in `auth_client.py`, while database communication is isolated in `supabase_client.py`.
+The application uses that token to load all the food lists available to the authenticated user. If at least one list exists, the first available list becomes active automatically.
 
-Both clients use standard HTTP requests instead of the full Supabase Python SDK.
+The user can then:
 
-The food client performs three main operations:
+1. open the list-management screen;
+2. create or select a list;
+3. add or remove foods;
+4. return to the home screen;
+5. press **Scegli per me**;
+6. receive a randomly selected food from the active list.
 
-- `GET` — retrieve the current food list
-- `POST` — add a new food
-- `DELETE` — remove an existing food
+Changes are sent immediately to Supabase, so lists and foods remain available after the application is closed.
 
-The REST endpoint is built from the Supabase project URL:
+Selecting logout invalidates the Supabase session, clears the application state, and returns the user to the login screen.
+
+---
+
+## Personal and Shared Lists
+
+### Personal lists
+
+A personal list belongs to one user through its `owner_id`.
+
+Only its owner can:
+
+- view it;
+- rename it;
+- delete it;
+- view its foods;
+- add foods;
+- remove foods.
+
+### Shared lists
+
+A shared list is connected to an internal group through its `group_id`.
+
+Groups do not have a separate screen in the application. Users interact directly with personal and shared lists from the same list-management screen.
+
+When a shared list is created:
+
+1. the application creates a group;
+2. the creator becomes its owner;
+3. the owner is added automatically as a group member;
+4. the food list is connected to the group;
+5. the owner can add registered users by email.
+
+The permissions are:
+
+| Action | Owner | Member |
+| --- | :---: | :---: |
+| View the shared list | Yes | Yes |
+| View its foods | Yes | Yes |
+| Add and remove foods | Yes | Yes |
+| Rename the list | Yes | Yes |
+| View members | Yes | Yes |
+| Add members | Yes | No |
+| Remove other members | Yes | No |
+| Leave the list | No | Yes |
+| Delete the list for everyone | Yes | No |
+
+A regular member can leave without deleting the list for the remaining users.
+
+Deleting a shared list removes its foods, memberships, and internal group through PostgreSQL cascade rules.
+
+The owner cannot currently leave or transfer ownership. Ownership transfer may be implemented in a future version.
+
+---
+
+## Application Structure
+
+Responsibilities are separated across multiple modules:
+
+- `main.py` manages application state, the active list, and screen navigation;
+- `auth_client.py` communicates with Supabase Authentication;
+- `supabase_client.py` communicates with the Supabase REST API;
+- `auth_screen.py` implements login and password reset;
+- `signup_screen.py` implements registration;
+- `food_lists_screen.py` manages personal and shared lists;
+- `food_popup.py` manages foods inside the active list;
+- `group_members_popup.py` manages shared-list members;
+- `ui_components.py` contains reusable Kivy widgets.
+
+The application deliberately uses standard HTTP requests instead of the full Supabase Python SDK.
+
+This keeps the Android dependency tree smaller and avoids transitive packages that are difficult to cross-compile with python-for-android.
+
+---
+
+## Supabase REST Integration
+
+The REST endpoints are built from the Supabase project URL.
+
+For example:
 
 ```python
-BASE_URL = f"{SUPABASE_URL}/rest/v1/foods"
+FOODS_URL = f"{SUPABASE_URL}/rest/v1/foods"
 ```
 
-Every food request includes the user's access token:
+Protected requests include the authenticated user's access token:
 
 ```python
 headers["Authorization"] = f"Bearer {access_token}"
 ```
 
-When a food is added or deleted, the database is updated immediately. This means the list is still available after closing and reopening the app.
+The application uses:
 
-Selecting logout invalidates the Supabase session, clears the local session and food list, and returns the user to the login screen.
+- `GET` to retrieve lists, foods, groups, and members;
+- `POST` to create records and call PostgreSQL functions;
+- `PATCH` to rename lists and groups;
+- `DELETE` to remove foods, lists, groups, and memberships;
+- RPC endpoints for protected membership operations.
 
-User-specific and group-shared lists will be implemented in a later development branch.
+The access token identifies the current user. Database policies then determine which records that user is allowed to access.
+
+---
+
+## Database Model
+
+The main PostgreSQL tables are:
+
+- `default_foods` — template used to populate a new user's default list;
+- `food_lists` — personal and shared lists;
+- `foods` — food items connected to lists through `list_id`;
+- `groups` — internal ownership records for shared lists;
+- `group_members` — users allowed to access shared lists.
+
+A personal list has an `owner_id`.
+
+A shared list has a `group_id`.
+
+A database constraint ensures that a list belongs either to one user or to one group, never both.
+
+The `group_members` table stores the user's role:
+
+- `owner`;
+- `member`.
+
+When a group is created, a PostgreSQL trigger automatically inserts its creator into `group_members` as the owner.
+
+Database functions support authorization and membership management, including:
+
+- checking whether a user belongs to a group;
+- checking whether a user owns a group;
+- checking access to a food list;
+- retrieving group members;
+- adding an existing user by email.
 
 ---
 
 ## Database Security
 
-Row Level Security is enabled on the Supabase `default_foods`, `food_lists`, and `foods` tables.
+Row Level Security is enabled for application data.
 
-The current database policies allow authenticated users to:
+The database policies enforce the following rules:
 
-- read the default food template
+- anonymous users cannot access food data;
+- users can access only their own personal lists;
+- users can access shared lists only when they belong to the corresponding group;
+- group members can view and modify foods in an accessible shared list;
+- only the owner can add other members;
+- only the owner can remove other members;
+- members cannot add themselves to arbitrary groups;
+- regular members can remove only their own membership when leaving;
+- the owner's membership cannot be removed;
+- only the owner can delete a shared list and its group.
 
-- read, create, rename, and delete only their own food lists
+These permissions are enforced in PostgreSQL, not only by hiding buttons in the interface.
 
-- read, add, update, and delete foods only inside their own lists
+The application uses the Supabase publishable key or legacy `anon` key together with the authenticated user's access token.
 
-Anonymous users cannot access food lists or foods.
+The `service_role` key must never be included in the client application.
 
-The versioned SQL schema and Row Level Security policies are stored in:
+The SQL schema, policies, functions, and triggers are stored as versioned migrations in:
 
 ```text
 supabase/migrations/
@@ -137,127 +320,131 @@ supabase/migrations/
 
 ## User Interface
 
-The application uses a Kivy `ScreenManager` to move between:
+The application uses a Kivy `ScreenManager` to navigate between:
 
-- login screen
-- registration screen
-- main food screen
-- food-list management screen
+- the login screen;
+- the registration screen;
+- the main food screen;
+- the food-list management screen.
 
-The main screen contains two primary actions.
+### Main screen
 
-### Choose for me
+The main screen displays:
 
-The app randomly selects one food from the current list and displays the result.
+- the active food list;
+- the **Scegli per me** button;
+- the randomly selected result;
+- the hamburger navigation button.
 
-### View food list
+If no list is active, the user is asked to create one.
 
-Opens the food-management popup where users can:
+If the active list is empty, the user is asked to add foods first.
 
-- view all saved foods
-- add a new food
-- remove an existing food
+### Food-list screen
 
-The popup also displays status feedback when an item is added, already exists, is removed, or cannot be found.
+The list-management screen displays personal and shared lists together.
 
-### Hamburger menu
+Shared lists are marked with:
 
-A hamburger button in the upper-left corner opens a dropdown menu containing the logout action.
+```text
+(condivisa)
+```
 
-The reusable `RoundedButton` and `MenuButton` components are defined in `ui_components.py`.
+Selecting a list reveals its available actions.
 
-The hamburger icon is drawn using three Kivy canvas lines, so it does not depend on a special font character.
+A shared-list owner sees the delete action, while a regular member sees the option to leave the list.
+
+### Food-management popup
+
+The food-management popup contains:
+
+- a scrollable list of foods;
+- one text field;
+- an **Aggiungi** button;
+- an **Elimina** button;
+- status feedback.
+
+The same input is used for both adding and deleting a food. The two action buttons are displayed side by side and use the reusable `RoundedButton` component.
+
+### Member-management popup
+
+The member popup displays every user who can access a shared list.
+
+All members can view the participants. Only the owner sees the controls for adding or removing other members.
+
+Duplicate memberships are rejected.
+
+### Reusable components
+
+`RoundedButton` draws its background with a Kivy `RoundedRectangle`.
+
+`MenuButton` extends it and draws the hamburger icon using three canvas lines, so the icon does not depend on a special font character.
 
 ---
 
 ## Responsive Design
 
-A significant part of the project involved adapting the original Kivy interface to different devices.
+Desktop and Android devices can have very different:
 
-Desktop and Android screens can have very different:
+- resolutions;
+- pixel densities;
+- physical dimensions;
+- aspect ratios.
 
-- resolutions
-- pixel densities
-- physical dimensions
-- aspect ratios
+Raw pixel values caused controls to appear at inconsistent physical sizes.
 
-Using fixed raw pixel values caused UI elements to appear at inconsistent sizes across devices.
+The interface therefore uses:
 
-The interface therefore uses Kivy's density-independent units.
-
-### `dp`
-
-`dp` is used for widget dimensions, spacing, padding, button heights, and rounded corners.
-
-For example:
-
-```python
-self.choose_button.height = dp(52)
-```
-
-This helps controls maintain a more consistent physical size across displays with different pixel densities.
-
-### `sp`
-
-`sp` is used for text sizes.
+- `dp` for widget dimensions, spacing, padding, and rounded corners;
+- `sp` for text sizes;
+- `size_hint` for proportional sizing;
+- `pos_hint` for proportional positioning;
+- scrollable layouts for content that may exceed the available space.
 
 For example:
 
 ```python
+self.choose_button.height = dp(48)
 self.title_label.font_size = sp(34)
 ```
-
-This keeps typography more consistent across desktop and mobile displays.
 
 ---
 
 ## Adaptive Backgrounds
 
-Another challenge was displaying the illustrated background correctly on phones with very different aspect ratios.
-
-The app uses:
+Background images use:
 
 ```python
 fit_mode="cover"
 ```
 
-so the image always fills the screen without being stretched or distorted.
+This fills the available screen without stretching the illustration.
 
-However, a single image can be cropped differently on very tall and narrow displays.
+However, the same image can be cropped differently on tall mobile displays.
 
-To improve this, the application calculates the screen aspect ratio:
+The home screen therefore calculates the current aspect ratio:
 
 ```python
 ratio = Window.width / Window.height
 ```
 
-It then selects between two background assets:
+It then selects the appropriate asset:
 
 ```python
-if ratio < 0.48:
-    background_source = "images/background_tall.png"
-else:
-    background_source = "images/background.png"
+background_source = (
+    "images/background_tall.png"
+    if ratio < 0.48
+    else "images/background.png"
+)
 ```
 
-This allows tall mobile displays to use an illustration composed specifically for that screen shape, while standard displays use the original version.
+Tall screens use `background_tall.png`, while standard displays use `background.png`.
 
 ---
 
-## Mobile Popup and Keyboard Handling
+## Mobile Keyboard Handling
 
-The food-management popup required additional work for Android.
-
-On mobile devices, opening the software keyboard can cover a large part of the application window. Earlier versions could leave form controls hidden or difficult to reach.
-
-The final popup uses one scrollable content area containing:
-
-- the food list
-- add-food input
-- add button
-- delete-food input
-- delete button
-- status messages
+On Android, the software keyboard can cover form controls.
 
 The application uses:
 
@@ -265,19 +452,16 @@ The application uses:
 Window.softinput_mode = "below_target"
 ```
 
-on Android.
+When the food input receives focus, the popup scrolls toward the field so that the input and buttons remain visible.
 
-When an input receives focus, the popup also scrolls toward that widget:
+The focus handler runs only on Android:
 
 ```python
-content_scroll.scroll_to(
-    instance,
-    padding=dp(16),
-    animate=True,
-)
+if platform != "android" or not focused:
+    return
 ```
 
-This ensures that the form remains usable even when the Android keyboard occupies a large part of the screen.
+This prevents the popup from moving unnecessarily when the field is selected on desktop.
 
 ---
 
@@ -285,110 +469,57 @@ This ensures that the form remains usable even when the Android keyboard occupie
 
 ### 1. Local Python prototype
 
-The original version stored foods locally in a JSON file.
+The original version stored foods in a local JSON file.
 
-This first implementation focused on:
-
-- Python fundamentals
-- application logic
-- random selection
-- reading and writing data
-- add and delete operations
-- simple persistence
+It focused on Python fundamentals, random selection, add and delete operations, and simple persistence.
 
 ### 2. Kivy graphical interface
 
-The project was then developed into a graphical Kivy application.
-
-This introduced:
-
-- widgets
-- layouts
-- buttons
-- labels
-- text inputs
-- popups
-- custom styling
-- image assets
-- custom fonts
+The project was converted into a graphical application using Kivy widgets, layouts, labels, buttons, text inputs, popups, custom fonts, and image assets.
 
 ### 3. Supabase persistence
 
-The local JSON storage was replaced with a Supabase database.
+Local JSON storage was replaced by a PostgreSQL database hosted on Supabase.
 
 This introduced remote persistence and REST API communication.
 
-The application communicates with Supabase through `requests` rather than the full Supabase Python SDK.
-
-This keeps the Android dependency tree significantly lighter.
-
 ### 4. Android packaging
 
-The project was packaged for Android using Buildozer and python-for-android.
+Buildozer and python-for-android were introduced to package the project for Android.
 
-The Android configuration includes:
+The Android application uses portrait orientation, Internet permission, a custom icon, and a reduced dependency set.
 
-- portrait orientation
-- Internet permission
-- Android API 35
-- minimum Android API 24
-- custom application icon
-- Python and Kivy dependencies
+### 5. Dependency redesign
 
-### 5. Android dependency debugging
+The first Supabase implementation used the full Python SDK.
 
-An earlier implementation used the Supabase Python SDK.
+Some transitive dependencies were problematic to cross-compile for Android, so the data and authentication layers were rewritten using direct `requests` calls.
 
-During Android builds, some of its transitive dependencies required packages that were problematic to cross-compile for Android.
+### 6. Responsive redesign
 
-The Supabase integration was therefore simplified to direct REST requests using `requests`.
+Testing on physical Android devices revealed issues involving pixel density, aspect ratios, background cropping, popup positioning, and the software keyboard.
 
-This reduced the dependency tree while preserving the database functionality required by the application.
+The interface was redesigned with `dp`, `sp`, adaptive images, proportional positioning, and scrollable content.
 
-### 6. Device testing and responsive redesign
+### 7. Authentication and security
 
-After producing a working APK, the earlier version of the application was tested on physical Android devices.
+Supabase Authentication, email confirmation, password reset, access tokens, protected requests, and PostgreSQL Row Level Security were added.
 
-This revealed differences that were not visible during desktop development, including:
+### 8. Multiple personal lists
 
-- inconsistent physical widget sizes
-- screen-density differences
-- background cropping
-- mobile keyboard behaviour
-- popup positioning
-- controls hidden behind the keyboard
+The original single list evolved into multiple personal lists, including automatic creation of a default list for every new user.
 
-The UI was progressively redesigned using `dp`, `sp`, responsive positioning, scrollable content, and adaptive image assets.
+### 9. Shared lists
 
-### 7. Authentication and database security
+Shared lists introduced groups, memberships, roles, protected PostgreSQL functions, database triggers, cascade deletion, and membership-based access control.
 
-Supabase Authentication was added using direct REST requests.
+Groups remain an internal database implementation rather than a separate concept exposed in the interface.
 
-This introduced:
+### 10. Automated testing and CI
 
-- account registration
-- email confirmation
-- login
-- logout
-- access-token handling
-- separate authentication screens
-- protected database requests
+The test suite was expanded to cover HTTP clients, application state, Kivy screens, popups, reusable components, personal lists, shared lists, membership permissions, Android-specific behaviour, and error paths.
 
-Row Level Security was then enabled to prevent anonymous access to the `foods` table.
-
-Automated tests were also added for the authentication and Supabase clients.
-
----
-
-## Screenshots
-
-### Main Screen
-
-![Food App main screen](screenshots/home.png)
-
-### Food List Management
-
-![Food list management](screenshots/food-list.png)
+GitHub Actions now requires 100% statement coverage.
 
 ---
 
@@ -396,35 +527,41 @@ Automated tests were also added for the authentication and Supabase clients.
 
 ### Application
 
-- Python
+- Python 3
 - Kivy
+- Requests
 
 ### Backend and data
 
 - Supabase
-- Supabase Auth
+- Supabase Authentication
 - PostgreSQL
 - Supabase REST API
 - Row Level Security
-- Requests
+- PostgreSQL functions and triggers
+- SQL migrations
 
 ### Testing
 
 - pytest
 - pytest-cov
-- unittest.mock
+- `unittest.mock`
+- Xvfb
+- GitHub Actions
 
 ### Android
 
 - Buildozer
 - python-for-android
-- Android SDK / NDK
+- Android SDK
+- Android NDK
 
-### Development and deployment
+### Web and development
 
+- HTML
+- CSS
 - Git
 - GitHub
-- GitHub Actions
 - GitHub Pages
 
 ---
@@ -438,7 +575,8 @@ food_kivy/
 │       ├── build-apk.yml
 │       └── tests.yml
 ├── docs/
-│   └── index.html
+│   ├── index.html
+│   └── reset-password.html
 ├── fonts/
 │   └── Pacifico-Regular.ttf
 ├── images/
@@ -446,14 +584,20 @@ food_kivy/
 │   ├── background_tall.png
 │   └── icon.png
 ├── screenshots/
+│   ├── food-lists.png
+│   ├── food-popup.png
 │   ├── home.png
-│   └── food-list.png
+│   └── login.png
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 20260908_initial_foods_schema.sql
 │   │   ├── 20260909_enable_foods_rls.sql
 │   │   ├── 20260912091103_create_food_lists.sql
-│   │   └── 20260912210221_allow_deleting_default_food_lists.sql
+│   │   ├── 20260912210221_allow_deleting_default_food_lists.sql
+│   │   ├── 20260913132317_create_groups.sql
+│   │   ├── 20260913133034_manage_group_members.sql
+│   │   ├── 20260913134347_connect_groups_to_food_lists.sql
+│   │   └── 20260913191848_restrict_group_member_management.sql
 │   ├── .gitignore
 │   └── config.toml
 ├── tests/
@@ -461,6 +605,7 @@ food_kivy/
 │   ├── test_auth_screen.py
 │   ├── test_food_lists_screen.py
 │   ├── test_food_popup.py
+│   ├── test_group_members_popup.py
 │   ├── test_main.py
 │   ├── test_signup_screen.py
 │   ├── test_supabase_client.py
@@ -471,6 +616,7 @@ food_kivy/
 ├── buildozer.spec
 ├── food_lists_screen.py
 ├── food_popup.py
+├── group_members_popup.py
 ├── main.py
 ├── pytest.ini
 ├── signup_screen.py
@@ -479,21 +625,13 @@ food_kivy/
 └── README.md
 ```
 
-A local `config.py` file is also required, but it is intentionally excluded from Git because it contains the Supabase project configuration.
+A local `config.py` file is also required, but it is excluded from Git because it contains the Supabase project configuration.
 
 ---
 
 ## Configuration
 
-Create a file named:
-
-```text
-config.py
-```
-
-in the project root.
-
-Add:
+Create `config.py` in the project root:
 
 ```python
 SUPABASE_URL = "your-supabase-project-url"
@@ -504,7 +642,7 @@ Use the Supabase publishable key or legacy `anon` key.
 
 Never place the `service_role` key inside the application.
 
-`config.py` is included in `.gitignore` and should not be committed with real project configuration.
+`config.py` is included in `.gitignore` and must not be committed with real project values.
 
 ---
 
@@ -514,11 +652,6 @@ Clone the repository:
 
 ```bash
 git clone https://github.com/laurabaraldi98-lgtm/food_kivy.git
-```
-
-Enter the project directory:
-
-```bash
 cd food_kivy
 ```
 
@@ -537,12 +670,12 @@ Activate it on Windows:
 Install the dependencies:
 
 ```bash
-pip install kivy requests pytest pytest-cov
+python -m pip install kivy requests pytest pytest-cov
 ```
 
-Create the local `config.py` file with the required Supabase values.
+Create `config.py` with the required Supabase values.
 
-Then run:
+Run the application:
 
 ```bash
 python main.py
@@ -552,23 +685,23 @@ python main.py
 
 ## Tests
 
-Run the complete test suite with:
+Run the complete test suite:
 
 ```bash
 python -m pytest
 ```
 
-Run the tests with coverage:
+Run the tests with the same coverage requirement used by GitHub Actions:
 
 ```bash
-python -m pytest --cov=auth_client --cov=auth_screen --cov=food_lists_screen --cov=food_popup --cov=main --cov=signup_screen --cov=supabase_client --cov=ui_components --cov-report=term-missing --cov-fail-under=100
+python -m pytest --cov=auth_client --cov=auth_screen --cov=food_lists_screen --cov=food_popup --cov=group_members_popup --cov=main --cov=signup_screen --cov=supabase_client --cov=ui_components --cov-report=term-missing --cov-fail-under=100
 ```
 
-The current test suite contains 90 tests covering the HTTP clients, authentication and signup screens, main application logic, food-list management, food-management popup, and reusable UI components.
+The current suite contains **131 tests** and maintains **100% statement coverage** across all Python application modules.
 
-The complete Python application currently has 100% statement coverage.
+Tests run automatically on every push and pull request.
 
-Tests run automatically on every push and pull request through GitHub Actions. Kivy interface tests use a virtual display on GitHub's Ubuntu runner.
+Xvfb provides a virtual display for Kivy tests on the GitHub Actions Ubuntu runner.
 
 ---
 
@@ -576,7 +709,7 @@ Tests run automatically on every push and pull request through GitHub Actions. K
 
 Android packaging is configured in `buildozer.spec`.
 
-The application currently uses:
+The application requirements are:
 
 ```ini
 requirements = python3,kivy,requests,certifi,urllib3,idna,charset_normalizer
@@ -592,164 +725,105 @@ android.minapi = 24
 android.ndk_api = 24
 ```
 
-The custom application icon is configured with:
+The application icon is configured with:
 
 ```ini
 icon.filename = images/icon.png
 ```
 
-Buildozer and python-for-android are used to produce the Android application package.
+The repository contains a GitHub Actions workflow for automated Android builds.
 
-The repository also contains a GitHub Actions workflow for automated Android builds.
-
-Earlier versions were successfully built and tested on physical Android devices. The current authentication version has been tested on desktop but still needs a new Android build and physical-device test.
+Earlier versions were packaged and tested on physical Android devices. The current shared-list version still requires a new APK build and physical-device test.
 
 ---
 
 ## Current Limitations
 
-The application is functional, but some important features are still under development.
-
-Currently:
-
-- foods are not yet connected to a group
-- users cannot yet create private or shared group lists
-- the session is stored only while the application is running
-- users must log in again after restarting the application
-- access-token refresh is not yet implemented
-- database requests are synchronous
-- the application requires an Internet connection
-- network failures have limited user-facing error handling
-- the interface is currently available only in Italian
-- the current authentication version still needs to be tested on Android
-
----
-
-## Planned User and Group Lists
-
-The next development step is to make food lists belong to specific users and groups.
-
-The planned database model will include:
-
-- a `groups` table
-- a `group_members` table
-- a `group_id` column in the `foods` table
-
-A personal list will be represented by a group containing one user. A shared list will use the same structure but contain multiple selected users.
-
-New Row Level Security policies will allow users to access only foods belonging to groups of which they are members.
-
-This work will be completed in a separate feature branch.
+- The session exists only while the application is running.
+- Users must sign in again after restarting the application.
+- Automatic access-token refresh is not implemented.
+- Users must already have an account before they can be added to a shared list.
+- There is no invitation flow for users without an account.
+- Group ownership cannot currently be transferred.
+- Database requests are synchronous.
+- The application requires an Internet connection.
+- Network errors have limited user-facing feedback.
+- Offline caching and retry handling are not implemented.
+- The interface is available only in Italian.
+- The current shared-list version still needs physical Android testing.
 
 ---
 
 ## Possible Future Improvements
 
-Potential future versions could include:
-
-- shared household or group lists
-- group invitations
-- group roles and permissions
-- food categories
-- filters
-- favourites
-- persistent login
-- automatic token refresh
-- better network error feedback
-- loading indicators
-- asynchronous requests
-- retry handling
-- offline caching
-- synchronization after reconnecting
-- animations and additional UI polish
-- additional languages
+- Persistent login
+- Automatic token refresh
+- Secure local session storage
+- Shared-list invitations
+- Group ownership transfer
+- Improved loading indicators
+- Better network-error feedback
+- Asynchronous requests
+- Retry handling
+- Offline caching
+- Synchronization after reconnecting
+- Food categories
+- Filters and favourites
+- Additional languages
+- Further animations and UI improvements
 
 ---
 
 ## What I Learned
 
-This project gave me practical experience with more than the initial application logic.
+This project provided practical experience with:
 
 ### Python and application structure
 
-- separating responsibilities between files
-- object-oriented programming
-- inheritance
-- application state management
-- writing reusable functions
-- working with external configuration
-- exception handling
+- separating responsibilities between modules;
+- object-oriented programming and inheritance;
+- application state management;
+- reusable functions and UI components;
+- external configuration;
+- validation and exception handling;
+- synchronization between local and remote state.
 
-### Kivy
+### Kivy and Android
 
-- widgets and layouts
-- screen management
-- buttons and labels
-- text inputs
-- popups and dropdown menus
-- canvas drawing
-- custom UI components
-- custom fonts
-- responsive positioning
-- `dp` and `sp`
-- mobile keyboard behaviour
+- widgets and layouts;
+- screen navigation;
+- popups and dropdown menus;
+- canvas drawing;
+- custom fonts and images;
+- responsive design using `dp` and `sp`;
+- scrollable mobile layouts;
+- software-keyboard and focus handling;
+- Buildozer and python-for-android;
+- Android dependency compatibility;
+- APK creation and physical-device testing.
 
-### Authentication and security
+### APIs, databases, and security
 
-- account registration
-- login and logout flows
-- email confirmation
-- access tokens
-- authenticated HTTP requests
-- Row Level Security
-- PostgreSQL policies
+- REST API communication;
+- HTTP methods, headers, and JSON payloads;
+- Supabase Authentication;
+- access tokens;
+- PostgreSQL relational modelling;
+- foreign keys and cascade deletion;
+- Row Level Security;
+- membership-based authorization;
+- PostgreSQL functions, triggers, constraints, and migrations.
 
-### APIs and databases
+### Testing and Git
 
-- REST API requests
-- HTTP methods
-- HTTP headers
-- JSON payloads
-- remote persistence
-- Supabase
-- PostgreSQL
-- SQL migrations
-
-### Testing
-
-- pytest
-- mocking HTTP requests
-- testing successful responses
-- testing HTTP errors
-- measuring code coverage
-
-### Android development
-
-- Buildozer configuration
-- python-for-android
-- Android SDK and NDK configuration
-- dependency compatibility
-- APK builds
-- testing on physical devices
-- debugging differences between desktop and Android
-
-### Responsive design
-
-- pixel density
-- physical versus logical dimensions
-- aspect ratios
-- image cropping
-- adaptive assets
-- mobile-specific layout problems
-
-### Git and CI
-
-- feature branches
-- commits
-- merges
-- GitHub Actions
-- GitHub Pages
-- iterative testing and debugging
+- pytest and pytest-cov;
+- mocking HTTP requests;
+- patching application dependencies;
+- testing Kivy widgets and nested callbacks;
+- testing platform-specific behaviour;
+- maintaining 100% statement coverage;
+- Git branches, commits, pull requests, and merges;
+- GitHub Actions and automated builds.
 
 ---
 
@@ -757,22 +831,21 @@ This project gave me practical experience with more than the initial application
 
 The current version includes:
 
-- account registration
-- email confirmation
-- login and logout
-- password reset by email
-- multiple private food lists
-- authenticated Supabase requests
-- Row Level Security
-- remote food persistence
-- random food selection
-- add and delete operations
-- responsive Kivy interface
-- Android keyboard support
-- adaptive backgrounds
-- custom application branding
-- 90 automated tests with 100% statement coverage
+- registration, email confirmation, login, logout, and password reset;
+- authenticated Supabase requests;
+- multiple personal lists;
+- default list creation with 22 foods;
+- shared multi-user lists;
+- owner and member permissions;
+- member management by email;
+- PostgreSQL Row Level Security;
+- persistent remote data;
+- random food selection;
+- responsive desktop and Android layouts;
+- custom application branding;
+- 131 automated tests;
+- 100% statement coverage.
 
-The authentication flow and food operations are working correctly on desktop.
+The authentication flow, personal lists, shared lists, member management, and food operations are working on desktop.
 
-The next major development phase will introduce user-owned and group-shared food lists with membership-based database policies.
+The next planned development phase is persistent session storage with automatic token refresh, followed by a new Android build and physical-device test.
