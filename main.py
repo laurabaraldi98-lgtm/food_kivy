@@ -9,14 +9,20 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.utils import platform
-from requests import RequestException
+from requests import HTTPError, RequestException
 
-from auth_client import sign_out
+from auth_client import refresh_session, sign_out
+
 from auth_screen import AuthScreen
 from food_lists_screen import FoodListsScreen
 from signup_screen import SignUpScreen
 from supabase_client import get_food_lists, get_foods
 from ui_components import MenuButton, RoundedButton
+from session_storage import (
+    clear_refresh_token,
+    load_refresh_token,
+    save_refresh_token,
+)
 
 
 if platform not in ("android", "ios"):
@@ -48,6 +54,25 @@ class FoodApp(App):
         manager.current = "auth"
 
         return manager
+
+    def on_start(self):
+        token = load_refresh_token(self.user_data_dir)
+        if not token:
+            return
+
+        try:
+            session = refresh_session(token)
+        except HTTPError as error:
+            if (
+                error.response is not None
+                and error.response.status_code in (400, 401)
+            ):
+                clear_refresh_token(self.user_data_dir)
+            return
+        except RequestException:
+            return
+
+        self.open_food_screen(session)
 
     def build_home(self):
         root = FloatLayout()
@@ -179,6 +204,11 @@ class FoodApp(App):
 
     def open_food_screen(self, session):
         self.session = session
+
+        refresh_token = session.get("refresh_token")
+        if refresh_token:
+            save_refresh_token(self.user_data_dir, refresh_token)
+
         self.reload_food_lists()
         self.root.current = "food"
 
@@ -248,6 +278,9 @@ class FoodApp(App):
                 )
             else:
                 print("Logout Supabase riuscito")
+
+        clear_refresh_token(self.user_data_dir)
+        self.session = None
 
         self.session = None
         self.food_lists = []

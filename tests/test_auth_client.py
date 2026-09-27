@@ -7,6 +7,7 @@ from auth_client import (
     AUTH_BASE_URL,
     HEADERS,
     PASSWORD_RESET_REDIRECT_URL,
+    refresh_session,
     request_password_reset,
     sign_in,
     sign_out,
@@ -142,3 +143,26 @@ def test_sign_out_sends_access_token(mock_post):
     )
 
     mock_response.raise_for_status.assert_called_once_with()
+
+
+@patch("auth_client.requests.post")
+def test_refresh_session_exchanges_refresh_token(mock_post):
+    new_session = {
+        "access_token": "new-access-token",
+        "refresh_token": "new-refresh-token",
+    }
+    mock_response = Mock()
+    mock_response.json.return_value = new_session
+    mock_post.return_value = mock_response
+
+    result = refresh_session("old-refresh-token")
+
+    mock_post.assert_called_once_with(
+        f"{AUTH_BASE_URL}/token",
+        headers=HEADERS,
+        params={"grant_type": "refresh_token"},
+        json={"refresh_token": "old-refresh-token"},
+        timeout=10,
+    )
+    mock_response.raise_for_status.assert_called_once_with()
+    assert result == new_session
