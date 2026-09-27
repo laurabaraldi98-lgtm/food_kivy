@@ -1,22 +1,41 @@
-from requests import HTTPError, RequestException
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from requests import HTTPError, RequestException
 
+import session_storage
 from main import FoodApp
-
 from session_storage import load_refresh_token, save_refresh_token
 
 
 @pytest.fixture
 def app(tmp_path, monkeypatch):
-    # Prevent tests from reading or deleting the real saved session.
-    # Keep test file operations away from the real app data directory.
+    # Keep tests away from the real app data and credential store.
     monkeypatch.setattr(
         FoodApp,
         "user_data_dir",
         property(lambda self: str(tmp_path)),
+    )
+
+    class FakeTokenStore:
+        def __init__(self):
+            self.token = None
+
+        def save_token(self, token):
+            self.token = token
+
+        def load_token(self):
+            return self.token
+
+        def delete_token(self):
+            self.token = None
+
+    fake_store = FakeTokenStore()
+    monkeypatch.setattr(
+        session_storage,
+        "_backend",
+        lambda: fake_store,
     )
 
     food_app = FoodApp()
