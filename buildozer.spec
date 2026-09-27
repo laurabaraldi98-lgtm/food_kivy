@@ -6,6 +6,7 @@ package.domain = org.laura
 
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,csv,ttf
+android.add_src = android_src
 
 version = 0.1
 

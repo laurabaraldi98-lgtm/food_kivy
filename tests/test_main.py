@@ -406,3 +406,73 @@ def test_get_access_token_renews_expiring_session(app):
     assert app.session == new_session
     assert load_refresh_token(app.user_data_dir) == "new-refresh-token"
     assert app.token_refresh_at > 101
+
+
+@pytest.mark.parametrize("status_code", [400, 401])
+def test_get_access_token_returns_to_login_when_refresh_is_rejected(
+    app, status_code
+):
+    save_refresh_token(app.user_data_dir, "old-refresh-token")
+    app.session = {
+        "access_token": "old-access-token",
+        "refresh_token": "old-refresh-token",
+        "user": {"id": "user-123"},
+    }
+    app.token_refresh_at = 100
+    app.food_lists = [{"id": 1, "name": "Cena"}]
+    app.current_list_id = 1
+    app.current_list_name = "Cena"
+    app.food = ["Pasta"]
+
+    error = HTTPError(
+        "Invalid refresh token",
+        response=SimpleNamespace(status_code=status_code),
+    )
+
+    with (
+        patch("main.time.monotonic", return_value=101),
+        patch("main.refresh_session", side_effect=error),
+        pytest.raises(HTTPError),
+    ):
+        app.get_access_token()
+
+    assert load_refresh_token(app.user_data_dir) is None
+    assert app.session is None
+    assert app.token_refresh_at is None
+    assert app.food_lists == []
+    assert app.current_list_id is None
+    assert app.food == []
+    assert app.root.current == "auth"
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        HTTPError(
+            "Server error",
+            response=SimpleNamespace(status_code=500),
+        ),
+        RequestException("Network unavailable"),
+    ],
+)
+def test_get_access_token_keeps_session_for_temporary_errors(
+    app, error
+):
+    save_refresh_token(app.user_data_dir, "old-refresh-token")
+    app.session = {
+        "access_token": "old-access-token",
+        "refresh_token": "old-refresh-token",
+        "user": {"id": "user-123"},
+    }
+    app.token_refresh_at = 100
+
+    with (
+        patch("main.time.monotonic", return_value=101),
+        patch("main.refresh_session", side_effect=error),
+        pytest.raises(RequestException),
+    ):
+        app.get_access_token()
+
+    assert load_refresh_token(app.user_data_dir) == "old-refresh-token"
+    assert app.session["access_token"] == "old-access-token"
+    assert app.root.current == "food"

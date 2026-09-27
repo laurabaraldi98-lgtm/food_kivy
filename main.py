@@ -263,9 +263,23 @@ class FoodApp(App):
         if refresh_at is not None and time.monotonic() >= refresh_at:
             # Renew before sending a request with an expired access token.
             refresh_token = self.session.get("refresh_token")
-            new_session = refresh_session(refresh_token)
-            self.set_session(new_session)
+            try:
+                new_session = refresh_session(refresh_token)
+            except HTTPError as error:
+                if (
+                    error.response is not None
+                    and error.response.status_code in (400, 401)
+                ):
+                    # A rejected refresh token can no longer restore this session.
+                    clear_refresh_token(self.user_data_dir)
+                    self.session = None
+                    self.token_refresh_at = None
+                    self.food_lists = []
+                    self.clear_active_food_list()
+                    self.root.current = "auth"
+                raise
 
+            self.set_session(new_session)
         return self.session["access_token"]
 
     def get_user_id(self):
