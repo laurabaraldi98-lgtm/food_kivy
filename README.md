@@ -4,7 +4,9 @@
 
 A responsive food suggestion application built with Python and Kivy for desktop and Android.
 
-Food App helps users decide what to eat by selecting a random item from one of their food lists. Users can create personal lists or share lists with other registered users. All data is stored remotely in Supabase and protected with PostgreSQL Row Level Security.
+Food App helps users decide what to eat by selecting a random item from one of their food lists. Users can create personal lists or share lists with other registered users. Food data is stored remotely in Supabase and protected with PostgreSQL Row Level Security.
+
+The application supports persistent login. Refresh tokens are stored using the operating system's secure credential storage on desktop and Android Keystore on Android.
 
 The interface is currently in Italian.
 
@@ -43,9 +45,10 @@ What began as a local Python project gradually evolved into a cross-platform app
 - a responsive graphical interface;
 - remote data persistence;
 - REST API communication;
-- user authentication;
+- user authentication and persistent sessions;
 - personal and shared data;
 - PostgreSQL Row Level Security;
+- secure credential storage;
 - Android packaging;
 - automated testing;
 - continuous integration.
@@ -61,6 +64,11 @@ What began as a local Python project gradually evolved into a cross-platform app
 - User login and logout
 - Password reset by email
 - Authenticated API requests using access tokens
+- Persistent login after closing and reopening the application
+- Refresh-token rotation when the session is renewed
+- Automatic access-token renewal before an authenticated request when needed
+- Secure refresh-token storage on desktop and Android
+- Local session cleanup when a refresh token is rejected
 
 ### Personal food lists
 
@@ -110,19 +118,21 @@ What began as a local Python project gradually evolved into a cross-platform app
 
 ### Testing and automation
 
-- 131 automated tests
-- 100% statement coverage
-- Tests for every Python application module
+- 166 automated tests
+- 100% statement coverage across the Python modules measured in CI
+- Tests for secure-storage integration without accessing real credentials
 - GitHub Actions CI on pushes and pull requests
 - Headless Kivy testing with Xvfb
-- Automated Android build workflow
+- Android APK build workflow
 - Versioned PostgreSQL migrations
 
 ---
 
 ## How It Works
 
-When the application starts, the login screen is displayed.
+When the application starts, it looks for a saved refresh token in the device's secure credential storage.
+
+If a token is available, the application asks Supabase to renew the session and opens the food screen. Otherwise, it displays the login screen.
 
 Users can:
 
@@ -136,9 +146,13 @@ New accounts can receive a confirmation email through Supabase. Authentication r
 https://laurabaraldi98-lgtm.github.io/food_kivy/
 ```
 
-After a successful login, Supabase returns a session containing an access token.
+After a successful login, Supabase returns a session containing an access token and a refresh token.
 
-The application uses that token to load all the food lists available to the authenticated user. If at least one list exists, the first available list becomes active automatically.
+The access token is used for authenticated requests. The refresh token is saved in the device's secure credential storage so the application can restore the session after a restart.
+
+When the application renews a session, Supabase returns a new refresh token. The application replaces the previously saved token with the new one. Renewal happens when the application reopens or when a protected request needs a fresh access token; it does not run continuously in the background.
+
+The application loads the food lists available to the authenticated user. If at least one list exists, the first available list becomes active automatically.
 
 The user can then:
 
@@ -151,7 +165,27 @@ The user can then:
 
 Changes are sent immediately to Supabase, so lists and foods remain available after the application is closed.
 
-Selecting logout invalidates the Supabase session, clears the application state, and returns the user to the login screen.
+Selecting logout clears the saved refresh token and application state, then returns the user to the login screen. The application also requests server-side sign-out when it can reach Supabase.
+
+---
+
+## Persistent Login and Token Storage
+
+`session_storage.py` provides the same save, load, and delete operations to the rest of the application while selecting the storage implementation for the current platform.
+
+On desktop, `desktop_token_store.py` uses `keyring` to access a supported operating-system credential store:
+
+- Windows Credential Manager on Windows;
+- Keychain on macOS;
+- a supported Secret Service or KWallet backend on Linux.
+
+On Android, `android_token_store.py` uses PyJNIus to call `TokenVault.java`. The Java class uses Android Keystore for the encryption key and stores the encrypted refresh token in application-private preferences.
+
+If secure storage is unavailable, the application does not save the refresh token in plaintext. The user may need to sign in again after restarting the application.
+
+Older versions stored the refresh token in a local `session.json` file. When that file is encountered, the application attempts to move its token to secure storage and removes the old plaintext file. If the migration cannot be completed securely, the old file is removed and the user must sign in again.
+
+Tests replace the operating-system storage with in-memory fakes. They do not read or modify a developer's real saved credentials.
 
 ---
 
@@ -210,8 +244,12 @@ The owner cannot currently leave or transfer ownership. Ownership transfer may b
 
 Responsibilities are separated across multiple modules:
 
-- `main.py` manages application state, the active list, and screen navigation;
+- `main.py` manages application state, session renewal, the active list, and screen navigation;
 - `auth_client.py` communicates with Supabase Authentication;
+- `session_storage.py` selects secure token storage and handles migration from the older local file;
+- `desktop_token_store.py` uses supported desktop credential stores through `keyring`;
+- `android_token_store.py` connects Python to the Android Java implementation through PyJNIus;
+- `android_src/org/foodkivy/security/TokenVault.java` encrypts and stores the token on Android;
 - `supabase_client.py` communicates with the Supabase REST API;
 - `auth_screen.py` implements login and password reset;
 - `signup_screen.py` implements registration;
@@ -220,7 +258,7 @@ Responsibilities are separated across multiple modules:
 - `group_members_popup.py` manages shared-list members;
 - `ui_components.py` contains reusable Kivy widgets.
 
-The application deliberately uses standard HTTP requests instead of the full Supabase Python SDK.
+The application uses standard HTTP requests instead of the full Supabase Python SDK.
 
 This keeps the Android dependency tree smaller and avoids transitive packages that are difficult to cross-compile with python-for-android.
 
@@ -479,13 +517,13 @@ The project was converted into a graphical application using Kivy widgets, layou
 
 ### 3. Supabase persistence
 
-Local JSON storage was replaced by a PostgreSQL database hosted on Supabase.
+Local JSON food storage was replaced by a PostgreSQL database hosted on Supabase.
 
 This introduced remote persistence and REST API communication.
 
 ### 4. Android packaging
 
-Buildozer and python-for-android were introduced to package the project for Android.
+Buildozer and python-for-Android were introduced to package the project for Android.
 
 The Android application uses portrait orientation, Internet permission, a custom icon, and a reduced dependency set.
 
@@ -519,7 +557,15 @@ Groups remain an internal database implementation rather than a separate concept
 
 The test suite was expanded to cover HTTP clients, application state, Kivy screens, popups, reusable components, personal lists, shared lists, membership permissions, Android-specific behaviour, and error paths.
 
-GitHub Actions now requires 100% statement coverage.
+GitHub Actions requires 100% statement coverage for the selected Python modules.
+
+### 11. Persistent login and secure token storage
+
+The application now restores sessions after a restart and replaces saved refresh tokens when Supabase renews them.
+
+Refresh tokens are stored in supported desktop credential stores or encrypted using Android Keystore. The older plaintext session file is removed during migration.
+
+The Android implementation was compiled into an APK and tested on a physical phone for login persistence and logout.
 
 ---
 
@@ -530,6 +576,9 @@ GitHub Actions now requires 100% statement coverage.
 - Python 3
 - Kivy
 - Requests
+- `keyring` for desktop credential storage
+- PyJNIus for Python-to-Java calls on Android
+- Java for the Android Keystore integration
 
 ### Backend and data
 
@@ -552,9 +601,10 @@ GitHub Actions now requires 100% statement coverage.
 ### Android
 
 - Buildozer
-- python-for-android
+- python-for-Android
 - Android SDK
 - Android NDK
+- Android Keystore
 
 ### Web and development
 
@@ -574,6 +624,11 @@ food_kivy/
 │   └── workflows/
 │       ├── build-apk.yml
 │       └── tests.yml
+├── android_src/
+│   └── org/
+│       └── foodkivy/
+│           └── security/
+│               └── TokenVault.java
 ├── docs/
 │   ├── index.html
 │   └── reset-password.html
@@ -601,24 +656,30 @@ food_kivy/
 │   ├── .gitignore
 │   └── config.toml
 ├── tests/
+│   ├── test_android_token_store.py
 │   ├── test_auth_client.py
 │   ├── test_auth_screen.py
+│   ├── test_desktop_token_store.py
 │   ├── test_food_lists_screen.py
 │   ├── test_food_popup.py
 │   ├── test_group_members_popup.py
 │   ├── test_main.py
+│   ├── test_session_storage.py
 │   ├── test_signup_screen.py
 │   ├── test_supabase_client.py
 │   └── test_ui_components.py
 ├── .gitignore
+├── android_token_store.py
 ├── auth_client.py
 ├── auth_screen.py
 ├── buildozer.spec
+├── desktop_token_store.py
 ├── food_lists_screen.py
 ├── food_popup.py
 ├── group_members_popup.py
 ├── main.py
 ├── pytest.ini
+├── session_storage.py
 ├── signup_screen.py
 ├── supabase_client.py
 ├── ui_components.py
@@ -667,10 +728,10 @@ Activate it on Windows:
 .venv\Scripts\Activate.ps1
 ```
 
-Install the dependencies:
+Install the desktop dependencies:
 
 ```bash
-python -m pip install kivy requests pytest pytest-cov
+python -m pip install kivy requests keyring pytest pytest-cov
 ```
 
 Create `config.py` with the required Supabase values.
@@ -680,6 +741,8 @@ Run the application:
 ```bash
 python main.py
 ```
+
+Persistent login requires an available, supported operating-system credential store. If secure storage is unavailable, the application can still run, but the user may need to sign in again after closing it.
 
 ---
 
@@ -694,10 +757,12 @@ python -m pytest
 Run the tests with the same coverage requirement used by GitHub Actions:
 
 ```bash
-python -m pytest --cov=auth_client --cov=auth_screen --cov=food_lists_screen --cov=food_popup --cov=group_members_popup --cov=main --cov=signup_screen --cov=supabase_client --cov=ui_components --cov-report=term-missing --cov-fail-under=100
+python -m pytest --cov=auth_client --cov=android_token_store --cov=desktop_token_store --cov=auth_screen --cov=food_lists_screen --cov=food_popup --cov=group_members_popup --cov=main --cov=session_storage --cov=signup_screen --cov=supabase_client --cov=ui_components --cov-report=term-missing --cov-fail-under=100
 ```
 
-The current suite contains **131 tests** and maintains **100% statement coverage** across all Python application modules.
+The current suite contains **166 tests** and maintains **100% statement coverage** across the Python modules measured in CI.
+
+These tests do not compile or execute `TokenVault.java`. The Android build verifies compilation, and installation on a physical device verifies the login and logout flow.
 
 Tests run automatically on every push and pull request.
 
@@ -723,7 +788,10 @@ android.permissions = INTERNET
 android.api = 35
 android.minapi = 24
 android.ndk_api = 24
+android.add_src = android_src
 ```
+
+`android.add_src` includes the Java source that implements secure token storage through Android Keystore.
 
 The application icon is configured with:
 
@@ -731,34 +799,29 @@ The application icon is configured with:
 icon.filename = images/icon.png
 ```
 
-The repository contains a GitHub Actions workflow for automated Android builds.
+The **Build APK** GitHub Actions workflow runs automatically on pushes to `main`. It can also be started manually for a selected branch using **Run workflow**.
 
-Earlier versions were packaged and tested on physical Android devices. The current shared-list version still requires a new APK build and physical-device test.
+The APK for this branch was built and tested on a physical Android phone. The application retained the login after being closed and reopened, and returned to the login screen after logout and reopening.
 
 ---
 
 ## Current Limitations
 
-- The session exists only while the application is running.
-- Users must sign in again after restarting the application.
-- Automatic access-token refresh is not implemented.
 - Users must already have an account before they can be added to a shared list.
 - There is no invitation flow for users without an account.
 - Group ownership cannot currently be transferred.
 - Database requests are synchronous.
-- The application requires an Internet connection.
+- The application requires an Internet connection for remote data operations.
 - Network errors have limited user-facing feedback.
 - Offline caching and retry handling are not implemented.
 - The interface is available only in Italian.
-- The current shared-list version still needs physical Android testing.
+- Persistent login depends on an available secure credential store on the device.
+- Access tokens that have already been issued remain valid until their expiry even after the corresponding refresh token is revoked.
 
 ---
 
 ## Possible Future Improvements
 
-- Persistent login
-- Automatic token refresh
-- Secure local session storage
 - Shared-list invitations
 - Group ownership transfer
 - Improved loading indicators
@@ -798,16 +861,20 @@ This project provided practical experience with:
 - responsive design using `dp` and `sp`;
 - scrollable mobile layouts;
 - software-keyboard and focus handling;
-- Buildozer and python-for-android;
+- Buildozer and python-for-Android;
 - Android dependency compatibility;
-- APK creation and physical-device testing.
+- APK creation and physical-device testing;
+- calling Android Java APIs from Python through PyJNIus.
 
 ### APIs, databases, and security
 
 - REST API communication;
 - HTTP methods, headers, and JSON payloads;
 - Supabase Authentication;
-- access tokens;
+- access and refresh tokens;
+- session renewal and refresh-token rotation;
+- operating-system credential storage;
+- Android Keystore;
 - PostgreSQL relational modelling;
 - foreign keys and cascade deletion;
 - Row Level Security;
@@ -821,6 +888,7 @@ This project provided practical experience with:
 - patching application dependencies;
 - testing Kivy widgets and nested callbacks;
 - testing platform-specific behaviour;
+- keeping tests isolated from real credentials;
 - maintaining 100% statement coverage;
 - Git branches, commits, pull requests, and merges;
 - GitHub Actions and automated builds.
@@ -832,6 +900,8 @@ This project provided practical experience with:
 The current version includes:
 
 - registration, email confirmation, login, logout, and password reset;
+- persistent login with secure refresh-token storage;
+- automatic session renewal when needed;
 - authenticated Supabase requests;
 - multiple personal lists;
 - default list creation with 22 foods;
@@ -843,9 +913,7 @@ The current version includes:
 - random food selection;
 - responsive desktop and Android layouts;
 - custom application branding;
-- 131 automated tests;
-- 100% statement coverage.
+- 166 automated tests;
+- 100% statement coverage across the Python modules measured in CI.
 
-The authentication flow, personal lists, shared lists, member management, and food operations are working on desktop.
-
-The next planned development phase is persistent session storage with automatic token refresh, followed by a new Android build and physical-device test.
+The authentication flow, personal lists, shared lists, member management, and food operations work on desktop. The persistent-login and logout flow has also been verified on a physical Android phone.
