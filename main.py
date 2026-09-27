@@ -1,4 +1,5 @@
 import random
+import time
 
 from kivy.app import App
 from kivy.core.window import Window
@@ -12,17 +13,16 @@ from kivy.utils import platform
 from requests import HTTPError, RequestException
 
 from auth_client import refresh_session, sign_out
-
 from auth_screen import AuthScreen
 from food_lists_screen import FoodListsScreen
-from signup_screen import SignUpScreen
-from supabase_client import get_food_lists, get_foods
-from ui_components import MenuButton, RoundedButton
 from session_storage import (
     clear_refresh_token,
     load_refresh_token,
     save_refresh_token,
 )
+from signup_screen import SignUpScreen
+from supabase_client import get_food_lists, get_foods
+from ui_components import MenuButton, RoundedButton
 
 
 if platform not in ("android", "ios"):
@@ -38,6 +38,7 @@ Window.set_icon("images/icon.png")
 class FoodApp(App):
     def build(self):
         self.session = None
+        self.token_refresh_at = None
         self.food = []
         self.food_lists = []
         self.current_list_id = None
@@ -56,6 +57,7 @@ class FoodApp(App):
         return manager
 
     def on_start(self):
+        # Restore the session saved during the previous login.
         token = load_refresh_token(self.user_data_dir)
         if not token:
             return
@@ -70,6 +72,7 @@ class FoodApp(App):
                 clear_refresh_token(self.user_data_dir)
             return
         except RequestException:
+            # Keep the saved token if the network is temporarily unavailable.
             return
 
         self.open_food_screen(session)
@@ -202,13 +205,29 @@ class FoodApp(App):
 
         return root
 
-    def open_food_screen(self, session):
+    def set_session(self, session):
         self.session = session
 
+        expires_in = session.get("expires_in")
+        if isinstance(expires_in, (int, float)):
+            # Refresh 60 seconds early, or after 90% for short sessions.
+            seconds_until_refresh = max(
+                expires_in - 60,
+                expires_in * 0.9,
+            )
+            self.token_refresh_at = (
+                time.monotonic() + seconds_until_refresh
+            )
+        else:
+            self.token_refresh_at = None
+
+        # Replace the stored refresh token after every successful renewal.
         refresh_token = session.get("refresh_token")
         if refresh_token:
             save_refresh_token(self.user_data_dir, refresh_token)
 
+    def open_food_screen(self, session):
+        self.set_session(session)
         self.reload_food_lists()
         self.root.current = "food"
 
@@ -232,6 +251,30 @@ class FoodApp(App):
             self.select_food_list(selected_list)
         else:
             self.clear_active_food_list()
+
+    def get_access_token(self):
+        if not self.session:
+            raise RuntimeError(
+                "User is not authenticated"
+            )
+
+        refresh_at = getattr(self, "token_refresh_at", None)
+
+        if refresh_at is not None and time.monotonic() >= refresh_at:
+            # Renew before sending a request with an expired access token.
+            refresh_token = self.session.get("refresh_token")
+            new_session = refresh_session(refresh_token)
+            self.set_session(new_session)
+
+        return self.session["access_token"]
+
+    def get_user_id(self):
+        if not self.session:
+            raise RuntimeError(
+                "User is not authenticated"
+            )
+
+        return self.session["user"]["id"]
 
     def select_food_list(self, food_list):
         self.current_list_id = food_list["id"]
@@ -281,8 +324,7 @@ class FoodApp(App):
 
         clear_refresh_token(self.user_data_dir)
         self.session = None
-
-        self.session = None
+        self.token_refresh_at = None
         self.food_lists = []
         self.clear_active_food_list()
         self.root.current = "auth"
@@ -290,22 +332,6 @@ class FoodApp(App):
     def logout_from_menu(self, instance):
         self.menu.dismiss()
         self.logout()
-
-    def get_access_token(self):
-        if not self.session:
-            raise RuntimeError(
-                "User is not authenticated"
-            )
-
-        return self.session["access_token"]
-
-    def get_user_id(self):
-        if not self.session:
-            raise RuntimeError(
-                "User is not authenticated"
-            )
-
-        return self.session["user"]["id"]
 
     def choose_food(self, instance):
         if not self.current_list_id:

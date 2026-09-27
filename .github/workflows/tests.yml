@@ -47,6 +47,7 @@ jobs:
             --cov=food_popup \
             --cov=group_members_popup \
             --cov=main \
+            --cov=session_storage \
             --cov=signup_screen \
             --cov=supabase_client \
             --cov=ui_components \
