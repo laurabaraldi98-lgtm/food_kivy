@@ -48,6 +48,19 @@ def sign_in(email, password):
     return response.json()
 
 
+def refresh_session(refresh_token):
+    response = requests.post(
+        f"{AUTH_BASE_URL}/token",
+        headers=HEADERS,
+        params={"grant_type": "refresh_token"},
+        json={"refresh_token": refresh_token},
+        timeout=10,
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
 def request_password_reset(email):
     response = requests.post(
         f"{AUTH_BASE_URL}/recover",

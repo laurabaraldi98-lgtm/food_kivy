@@ -1,14 +1,43 @@
-from requests import RequestException
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from requests import HTTPError, RequestException
 
+import session_storage
 from main import FoodApp
+from session_storage import load_refresh_token, save_refresh_token
 
 
 @pytest.fixture
-def app():
+def app(tmp_path, monkeypatch):
+    # Keep tests away from the real app data and credential store.
+    monkeypatch.setattr(
+        FoodApp,
+        "user_data_dir",
+        property(lambda self: str(tmp_path)),
+    )
+
+    class FakeTokenStore:
+        def __init__(self):
+            self.token = None
+
+        def save_token(self, token):
+            self.token = token
+
+        def load_token(self):
+            return self.token
+
+        def delete_token(self):
+            self.token = None
+
+    fake_store = FakeTokenStore()
+    monkeypatch.setattr(
+        session_storage,
+        "_backend",
+        lambda: fake_store,
+    )
+
     food_app = FoodApp()
     food_app.session = {
         "access_token": "test-access-token",
@@ -296,3 +325,173 @@ def test_logout_from_menu_closes_menu_and_logs_out(app):
 
     mock_dismiss.assert_called_once_with()
     mock_logout.assert_called_once_with()
+
+
+def test_on_start_without_saved_token_does_not_refresh(app):
+    app.root.current = "auth"
+
+    with patch("main.refresh_session") as mock_refresh:
+        app.on_start()
+
+    mock_refresh.assert_not_called()
+    assert app.root.current == "auth"
+
+
+def test_on_start_restores_session_and_replaces_saved_token(app):
+    save_refresh_token(app.user_data_dir, "old-refresh-token")
+    app.root.current = "auth"
+
+    new_session = {
+        "access_token": "new-access-token",
+        "refresh_token": "new-refresh-token",
+        "expires_in": 3600,
+        "user": {"id": "user-123"},
+    }
+
+    with (
+        patch(
+            "main.refresh_session",
+            return_value=new_session,
+        ) as mock_refresh,
+        patch("main.get_food_lists", return_value=[]),
+    ):
+        app.on_start()
+
+    mock_refresh.assert_called_once_with("old-refresh-token")
+    assert app.root.current == "food"
+    assert app.session == new_session
+    assert load_refresh_token(app.user_data_dir) == "new-refresh-token"
+
+
+def test_on_start_removes_invalid_saved_token(app):
+    save_refresh_token(app.user_data_dir, "invalid-token")
+    app.root.current = "auth"
+
+    error = HTTPError(
+        "Invalid refresh token",
+        response=SimpleNamespace(status_code=401),
+    )
+
+    with patch(
+        "main.refresh_session",
+        side_effect=error,
+    ):
+        app.on_start()
+
+    assert load_refresh_token(app.user_data_dir) is None
+    assert app.root.current == "auth"
+
+
+def test_on_start_keeps_saved_token_when_network_fails(app):
+    save_refresh_token(app.user_data_dir, "saved-token")
+    app.root.current = "auth"
+
+    with patch(
+        "main.refresh_session",
+        side_effect=RequestException("Network unavailable"),
+    ):
+        app.on_start()
+
+    assert load_refresh_token(app.user_data_dir) == "saved-token"
+    assert app.root.current == "auth"
+
+
+def test_get_access_token_renews_expiring_session(app):
+    app.session = {
+        "access_token": "old-access-token",
+        "refresh_token": "old-refresh-token",
+        "user": {"id": "user-123"},
+    }
+    app.token_refresh_at = 100
+
+    new_session = {
+        "access_token": "new-access-token",
+        "refresh_token": "new-refresh-token",
+        "expires_in": 3600,
+        "user": {"id": "user-123"},
+    }
+
+    with (
+        patch("main.time.monotonic", return_value=101),
+        patch(
+            "main.refresh_session",
+            return_value=new_session,
+        ) as mock_refresh,
+    ):
+        access_token = app.get_access_token()
+
+    mock_refresh.assert_called_once_with("old-refresh-token")
+    assert access_token == "new-access-token"
+    assert app.session == new_session
+    assert load_refresh_token(app.user_data_dir) == "new-refresh-token"
+    assert app.token_refresh_at > 101
+
+
+@pytest.mark.parametrize("status_code", [400, 401])
+def test_get_access_token_returns_to_login_when_refresh_is_rejected(
+    app, status_code
+):
+    save_refresh_token(app.user_data_dir, "old-refresh-token")
+    app.session = {
+        "access_token": "old-access-token",
+        "refresh_token": "old-refresh-token",
+        "user": {"id": "user-123"},
+    }
+    app.token_refresh_at = 100
+    app.food_lists = [{"id": 1, "name": "Cena"}]
+    app.current_list_id = 1
+    app.current_list_name = "Cena"
+    app.food = ["Pasta"]
+
+    error = HTTPError(
+        "Invalid refresh token",
+        response=SimpleNamespace(status_code=status_code),
+    )
+
+    with (
+        patch("main.time.monotonic", return_value=101),
+        patch("main.refresh_session", side_effect=error),
+        pytest.raises(HTTPError),
+    ):
+        app.get_access_token()
+
+    assert load_refresh_token(app.user_data_dir) is None
+    assert app.session is None
+    assert app.token_refresh_at is None
+    assert app.food_lists == []
+    assert app.current_list_id is None
+    assert app.food == []
+    assert app.root.current == "auth"
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        HTTPError(
+            "Server error",
+            response=SimpleNamespace(status_code=500),
+        ),
+        RequestException("Network unavailable"),
+    ],
+)
+def test_get_access_token_keeps_session_for_temporary_errors(
+    app, error
+):
+    save_refresh_token(app.user_data_dir, "old-refresh-token")
+    app.session = {
+        "access_token": "old-access-token",
+        "refresh_token": "old-refresh-token",
+        "user": {"id": "user-123"},
+    }
+    app.token_refresh_at = 100
+
+    with (
+        patch("main.time.monotonic", return_value=101),
+        patch("main.refresh_session", side_effect=error),
+        pytest.raises(RequestException),
+    ):
+        app.get_access_token()
+
+    assert load_refresh_token(app.user_data_dir) == "old-refresh-token"
+    assert app.session["access_token"] == "old-access-token"
+    assert app.root.current == "food"
