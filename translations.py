@@ -17,16 +17,23 @@ TEXTS = {
         "invalid_credentials": "Email o password non corretti",
         "email_required_for_reset": "Inserisci prima la tua email",
         "reset_request_failed": "Impossibile inviare l'email di recupero",
-        "reset_email_sent": (
-            "Controlla la tua email per reimpostare la password"
-        ),
+        "reset_email_sent": "Controlla la tua email per reimpostare la password",
         "create_account": "Crea account",
         "have_account": "Hai già un account?",
         "password_too_short": "La password deve avere almeno 6 caratteri",
         "signup_failed": "Impossibile creare l'account",
-        "confirm_email": (
-            "Controlla la tua email per confermare l'account"
-        ),
+        "confirm_email": "Controlla la tua email per confermare l'account",
+        "my_lists": "Le mie liste",
+        "back_home": "Torna alla Home",
+        "personal_list_button": "+ Personale",
+        "shared_list_button": "+ Condivisa",
+        "no_lists": "Non hai ancora nessuna lista",
+        "shared_suffix": "condivisa",
+        "view_foods": "Vedi cibi",
+        "members": "Membri",
+        "rename": "Rinomina",
+        "leave": "Abbandona",
+        "delete": "Elimina",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -52,6 +59,17 @@ TEXTS = {
         "password_too_short": "Password must be at least 6 characters",
         "signup_failed": "Could not create the account",
         "confirm_email": "Check your email to confirm your account",
+        "my_lists": "My lists",
+        "back_home": "Back to Home",
+        "personal_list_button": "+ Personal",
+        "shared_list_button": "+ Shared",
+        "no_lists": "You don't have any lists yet",
+        "shared_suffix": "shared",
+        "view_foods": "View foods",
+        "members": "Members",
+        "rename": "Rename",
+        "leave": "Leave",
+        "delete": "Delete",
     },
 }
 

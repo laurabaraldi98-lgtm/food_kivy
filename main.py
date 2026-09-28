@@ -63,7 +63,11 @@ class FoodApp(App):
         manager.add_widget(signup_screen)
 
         manager.add_widget(home_screen)
-        manager.add_widget(FoodListsScreen(name="food_lists"))
+
+        lists_screen = FoodListsScreen(name="food_lists")
+        lists_screen.refresh_texts(self.language)
+        manager.add_widget(lists_screen)
+
         manager.current = "auth"
 
         return manager
@@ -322,6 +326,9 @@ class FoodApp(App):
         # Update the account screens when the user changes language.
         self.root.get_screen("auth").refresh_texts(language)
         self.root.get_screen("signup").refresh_texts(language)
+        self.root.get_screen("food_lists").refresh_texts(language)
+        if self.root.current == "food_lists":
+            self.root.get_screen("food_lists").render_lists()
 
     def refresh_home_texts(self):
         self.title_label.text = translate(self.language, "home_title")

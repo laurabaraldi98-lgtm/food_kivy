@@ -25,6 +25,7 @@ from supabase_client import (
     rename_food_list,
     rename_group,
 )
+from translations import translate
 from ui_components import MenuButton, RoundedButton
 
 POPUP_COLOR = (0.70, 0.92, 0.88, 1)
@@ -54,6 +55,7 @@ class FoodListsScreen(Screen):
         super().__init__(**kwargs)
         self.selected_list_id = None
         self.groups = []
+        self.language = "it"
         self.build_interface()
 
     def build_interface(self):
@@ -67,7 +69,7 @@ class FoodListsScreen(Screen):
         )
         root.add_widget(background)
 
-        title = Label(
+        self.title_label = Label(
             text="Le mie liste",
             font_name="fonts/Pacifico-Regular.ttf",
             font_size=sp(34),
@@ -75,7 +77,7 @@ class FoodListsScreen(Screen):
             pos_hint={"center_x": 0.5, "center_y": 0.79},
             color=TEXT_COLOR,
         )
-        root.add_widget(title)
+        root.add_widget(self.title_label)
 
         self.menu_button = MenuButton(
             text="",
@@ -89,7 +91,7 @@ class FoodListsScreen(Screen):
 
         self.menu = DropDown(auto_width=False, width=dp(170))
 
-        home_button = RoundedButton(
+        self.home_button = RoundedButton(
             text="Torna alla Home",
             font_size=sp(16),
             size_hint_y=None,
@@ -97,9 +99,19 @@ class FoodListsScreen(Screen):
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
-        home_button.bind(on_release=self.go_home_from_menu)
+        self.home_button.bind(on_release=self.go_home_from_menu)
 
-        logout_button = RoundedButton(
+        self.language_button = RoundedButton(
+            text="English",
+            font_size=sp(17),
+            size_hint_y=None,
+            height=dp(48),
+            my_color=(0.10, 0.55, 0.45, 1),
+            color=(1, 1, 1, 1),
+        )
+        self.language_button.bind(on_release=self.toggle_language)
+
+        self.logout_button = RoundedButton(
             text="Logout",
             font_size=sp(17),
             size_hint_y=None,
@@ -107,10 +119,11 @@ class FoodListsScreen(Screen):
             my_color=(0.55, 0.20, 0.20, 1),
             color=(1, 1, 1, 1),
         )
-        logout_button.bind(on_release=self.logout_from_menu)
+        self.logout_button.bind(on_release=self.logout_from_menu)
 
-        self.menu.add_widget(home_button)
-        self.menu.add_widget(logout_button)
+        self.menu.add_widget(self.home_button)
+        self.menu.add_widget(self.language_button)
+        self.menu.add_widget(self.logout_button)
         self.menu_button.bind(on_release=self.menu.open)
         root.add_widget(self.menu_button)
 
@@ -129,34 +142,34 @@ class FoodListsScreen(Screen):
             height=dp(48),
         )
 
-        personal_button = RoundedButton(
+        self.personal_button = RoundedButton(
             text="+ Personale",
             font_size=sp(15),
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
-        personal_button.bind(
+        self.personal_button.bind(
             on_release=lambda instance: self.open_create_popup(
                 instance,
                 shared=False,
             )
         )
 
-        shared_button = RoundedButton(
+        self.shared_button = RoundedButton(
             text="+ Condivisa",
             font_size=sp(15),
             my_color=(0.25, 0.55, 0.70, 1),
             color=(1, 1, 1, 1),
         )
-        shared_button.bind(
+        self.shared_button.bind(
             on_release=lambda instance: self.open_create_popup(
                 instance,
                 shared=True,
             )
         )
 
-        create_buttons.add_widget(personal_button)
-        create_buttons.add_widget(shared_button)
+        create_buttons.add_widget(self.personal_button)
+        create_buttons.add_widget(self.shared_button)
 
         self.status_label = Label(
             text="",
@@ -183,6 +196,27 @@ class FoodListsScreen(Screen):
         root.add_widget(content)
         self.add_widget(root)
 
+    def refresh_texts(self, language):
+        self.language = language
+        self.title_label.text = translate(language, "my_lists")
+        self.home_button.text = translate(language, "back_home")
+        self.logout_button.text = translate(language, "logout")
+        self.personal_button.text = translate(
+            language, "personal_list_button"
+        )
+        self.shared_button.text = translate(
+            language, "shared_list_button"
+        )
+        self.language_button.text = (
+            "Italiano" if language == "en" else "English"
+        )
+
+    def toggle_language(self, instance):
+        self.menu.dismiss()
+        app = App.get_running_app()
+        next_language = "en" if app.language == "it" else "it"
+        app.set_language(next_language)
+
     def on_pre_enter(self, *args):
         app = App.get_running_app()
 
@@ -204,7 +238,7 @@ class FoodListsScreen(Screen):
         if not app.food_lists:
             self.list_container.add_widget(
                 Label(
-                    text="Non hai ancora nessuna lista",
+                    text=translate(self.language, "no_lists"),
                     font_size=sp(18),
                     size_hint_y=None,
                     height=dp(60),
@@ -236,7 +270,8 @@ class FoodListsScreen(Screen):
 
             displayed_name = food_list["name"]
             if is_shared:
-                displayed_name += "  (condivisa)"
+                shared_suffix = translate(self.language, "shared_suffix")
+                displayed_name += f"  ({shared_suffix})"
 
             list_button = RoundedButton(
                 text=(
@@ -269,18 +304,17 @@ class FoodListsScreen(Screen):
                 )
 
                 view_button = RoundedButton(
-                    text="Vedi cibi",
+                    text=translate(self.language, "view_foods"),
                     font_size=sp(13),
                     my_color=(0.10, 0.55, 0.45, 1),
                     color=(1, 1, 1, 1),
                 )
                 view_button.bind(on_release=self.open_selected_foods)
-
                 primary_actions.add_widget(view_button)
 
                 if is_shared:
                     members_button = RoundedButton(
-                        text="Membri",
+                        text=translate(self.language, "members"),
                         font_size=sp(13),
                         my_color=(0.55, 0.42, 0.70, 1),
                         color=(1, 1, 1, 1),
@@ -298,7 +332,7 @@ class FoodListsScreen(Screen):
                 )
 
                 rename_button = RoundedButton(
-                    text="Rinomina",
+                    text=translate(self.language, "rename"),
                     font_size=sp(13),
                     my_color=(0.25, 0.55, 0.70, 1),
                     color=(1, 1, 1, 1),
@@ -306,10 +340,9 @@ class FoodListsScreen(Screen):
                 rename_button.bind(on_release=self.open_rename_popup)
 
                 final_button = RoundedButton(
-                    text=(
-                        "Abbandona"
-                        if is_shared and not is_owner
-                        else "Elimina"
+                    text=translate(
+                        self.language,
+                        "leave" if is_shared and not is_owner else "delete",
                     ),
                     font_size=sp(13),
                     my_color=(0.65, 0.18, 0.18, 1),

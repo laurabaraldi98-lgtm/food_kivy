@@ -805,3 +805,67 @@ def test_leave_shared_list(screen, fake_popup, has_remaining):
         app.select_food_list.assert_called_once_with(remaining)
     else:
         app.clear_active_food_list.assert_called_once_with()
+
+
+def test_refresh_texts_translates_list_screen_controls(screen):
+    screen.refresh_texts("en")
+
+    assert screen.title_label.text == "My lists"
+    assert screen.home_button.text == "Back to Home"
+    assert screen.personal_button.text == "+ Personal"
+    assert screen.shared_button.text == "+ Shared"
+    assert screen.logout_button.text == "Log out"
+    assert screen.language_button.text == "Italiano"
+
+    screen.refresh_texts("it")
+
+    assert screen.title_label.text == "Le mie liste"
+    assert screen.language_button.text == "English"
+
+
+def test_render_lists_translates_actions_but_keeps_list_name(screen):
+    food_list = {"id": 2, "name": "Pranzo", "group_id": 9}
+    app = make_app(food_lists=[food_list], current_list_id=2)
+    screen.groups = [
+        {"id": 9, "name": "Pranzo", "owner_id": "other-user"}
+    ]
+    screen.selected_list_id = 2
+    screen.refresh_texts("en")
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.render_lists()
+
+    texts = {
+        widget.text
+        for widget in screen.list_container.walk()
+        if isinstance(widget, RoundedButton)
+    }
+
+    assert "*  Pranzo  (shared)" in texts
+    assert {"View foods", "Members", "Rename", "Leave"} <= texts
+    assert "Delete" not in texts
+
+
+def test_empty_lists_message_is_translated(screen):
+    app = make_app()
+    screen.refresh_texts("en")
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.render_lists()
+
+    find_widget(
+        screen.list_container,
+        Label,
+        text="You don't have any lists yet",
+    )
+
+
+def test_language_button_requests_change_from_app(screen):
+    app = SimpleNamespace(language="it", set_language=Mock())
+    screen.menu = SimpleNamespace(dismiss=Mock())
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.toggle_language(None)
+
+    screen.menu.dismiss.assert_called_once_with()
+    app.set_language.assert_called_once_with("en")

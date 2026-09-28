@@ -1,8 +1,12 @@
 import pytest
 
+from unittest.mock import patch
+
 from language_settings import load_language
 from main import FoodApp
 from translations import TEXTS, translate
+
+from ui_components import RoundedButton
 
 
 @pytest.fixture
@@ -102,3 +106,31 @@ def test_unsupported_language_is_rejected(app):
 
     assert app.language == "it"
     assert load_language(app.user_data_dir) == "it"
+
+
+def test_changing_language_updates_visible_list_actions(app):
+    food_list = {"id": 1, "name": "Pranzo"}
+    app.food_lists = [food_list]
+    lists_screen = app.root.get_screen("food_lists")
+
+    with (
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch.object(app, "reload_food_lists"),
+        patch.object(app, "get_access_token", return_value="test-token"),
+        patch("food_lists_screen.get_groups", return_value=[]),
+    ):
+        app.root.current = "food_lists"
+        lists_screen.selected_list_id = 1
+        lists_screen.render_lists()
+
+        app.set_language("en")
+
+    texts = {
+        widget.text
+        for widget in lists_screen.list_container.walk()
+        if isinstance(widget, RoundedButton)
+    }
+
+    assert "Pranzo" in texts
+    assert {"View foods", "Rename", "Delete"} <= texts
+    assert lists_screen.title_label.text == "My lists"
