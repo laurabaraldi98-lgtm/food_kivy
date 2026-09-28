@@ -186,3 +186,34 @@ def test_password_reset_displays_error_when_request_fails(
     assert screen.status_label.text == (
         "Impossibile inviare l'email di recupero"
     )
+
+
+def test_refresh_texts_translates_login_and_current_message(screen):
+    screen.get_credentials()
+
+    screen.refresh_texts("en")
+
+    assert screen.language_button.text == "Italiano"
+    assert screen.sign_in_button.text == "Sign in"
+    assert screen.forgot_password_button.text == "Forgot password?"
+    assert screen.account_prompt.text == "Don't have an account?"
+    assert screen.sign_up_button.text == "Create one"
+    assert screen.status_label.text == "Enter email and password"
+
+    screen.refresh_texts("it")
+
+    assert screen.language_button.text == "English"
+    assert screen.sign_in_button.text == "Accedi"
+    assert screen.status_label.text == "Inserisci email e password"
+
+
+def test_language_button_requests_change_from_app(screen):
+    app = SimpleNamespace(language="it", set_language=Mock())
+
+    with patch(
+        "auth_screen.App.get_running_app",
+        return_value=app,
+    ):
+        screen.toggle_language(None)
+
+    app.set_language.assert_called_once_with("en")

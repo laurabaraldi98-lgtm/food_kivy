@@ -54,7 +54,9 @@ class FoodApp(App):
         home_screen.add_widget(self.build_home())
 
         manager = ScreenManager()
-        manager.add_widget(AuthScreen(name="auth"))
+        auth_screen = AuthScreen(name="auth")
+        auth_screen.refresh_texts(self.language)
+        manager.add_widget(auth_screen)
         manager.add_widget(SignUpScreen(name="signup"))
         manager.add_widget(home_screen)
         manager.add_widget(FoodListsScreen(name="food_lists"))
@@ -312,6 +314,8 @@ class FoodApp(App):
         save_language(self.user_data_dir, language)
         self.language = language
         self.refresh_home_texts()
+
+        self.root.get_screen("auth").refresh_texts(language)
 
     def refresh_home_texts(self):
         self.title_label.text = translate(self.language, "home_title")

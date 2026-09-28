@@ -60,6 +60,10 @@ def test_saved_language_is_loaded_when_app_restarts(app):
     assert restarted_app.title_label.text == "What should we eat?"
     assert restarted_app.language_button.text == "Italiano"
 
+    auth_screen = restarted_app.root.get_screen("auth")
+    assert auth_screen.sign_in_button.text == "Sign in"
+    assert auth_screen.language_button.text == "Italiano"
+
 
 def test_active_list_name_is_not_translated(app):
     app.current_list_id = 7
