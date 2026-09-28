@@ -566,14 +566,10 @@ class FoodListsScreen(Screen):
         layout = BoxLayout(
             orientation="vertical",
             spacing=dp(7),
-            padding=(
-                dp(14),
-                dp(10),
-                dp(14),
-                dp(2),
-            ),
+            padding=(dp(14), dp(10), dp(14), dp(2)),
         )
         add_colored_background(layout)
+
         name_input = TextInput(
             text=food_list["name"],
             multiline=False,
@@ -582,6 +578,7 @@ class FoodListsScreen(Screen):
             font_size=sp(15),
             padding=(dp(7), dp(7)),
         )
+
         status = Label(
             text="",
             size_hint_y=None,
@@ -589,19 +586,21 @@ class FoodListsScreen(Screen):
             font_size=sp(12),
             color=(0.55, 0.15, 0.15, 1),
         )
+
         save_button = RoundedButton(
-            text="Salva",
+            text=translate(self.language, "save"),
             size_hint_y=None,
             height=dp(42),
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
+
         layout.add_widget(name_input)
         layout.add_widget(status)
         layout.add_widget(save_button)
 
         popup = Popup(
-            title="Rinomina lista",
+            title=translate(self.language, "rename_list"),
             title_size=sp(19),
             content=layout,
             size_hint=(0.78, None),
@@ -617,7 +616,7 @@ class FoodListsScreen(Screen):
             new_name = name_input.text.strip()
 
             if not new_name:
-                status.text = "Inserisci un nuovo nome"
+                status.text = translate(self.language, "new_name_required")
                 return
 
             if any(
@@ -626,7 +625,7 @@ class FoodListsScreen(Screen):
                 == new_name.casefold()
                 for existing in app.food_lists
             ):
-                status.text = "Esiste già una lista con questo nome"
+                status.text = translate(self.language, "duplicate_list_name")
                 return
 
             try:
@@ -644,16 +643,19 @@ class FoodListsScreen(Screen):
                         app.get_access_token(),
                     )
             except RequestException:
-                status.text = "Impossibile rinominare la lista"
+                status.text = translate(self.language, "rename_list_failed")
                 return
 
             food_list["name"] = new_name
             group = self.get_group_for_list(food_list)
             if group:
                 group["name"] = new_name
+
             if app.current_list_id == food_list["id"]:
                 app.current_list_name = new_name
-                app.active_list_label.text = f"Lista attiva: {new_name}"
+                app.active_list_label.text = translate(
+                    self.language, "active_list", name=new_name
+                )
 
             popup.dismiss()
             self.render_lists()

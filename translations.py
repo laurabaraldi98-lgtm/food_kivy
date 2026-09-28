@@ -42,6 +42,10 @@ TEXTS = {
         "list_name_required": "Inserisci un nome per la lista",
         "duplicate_list_name": "Esiste già una lista con questo nome",
         "create_list_failed": "Impossibile creare la lista",
+        "rename_list": "Rinomina lista",
+        "save": "Salva",
+        "new_name_required": "Inserisci un nuovo nome",
+        "rename_list_failed": "Impossibile rinominare la lista",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -86,6 +90,10 @@ TEXTS = {
         "list_name_required": "Enter a name for the list",
         "duplicate_list_name": "A list with this name already exists",
         "create_list_failed": "Could not create the list",
+        "rename_list": "Rename list",
+        "save": "Save",
+        "new_name_required": "Enter a new name",
+        "rename_list_failed": "Could not rename the list",
     },
 }
 

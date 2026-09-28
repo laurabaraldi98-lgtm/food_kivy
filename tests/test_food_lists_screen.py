@@ -897,3 +897,50 @@ def test_create_popup_uses_english(
         create_button.dispatch("on_release")
 
     assert popup_status(popup).text == "Enter a name for the list"
+
+
+def test_rename_popup_uses_english_and_updates_active_label(
+    screen, fake_popup
+):
+    selected = {"id": 1, "name": "Pranzo"}
+    app = make_app(food_lists=[selected], current_list_id=1)
+    screen.refresh_texts("en")
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch("food_lists_screen.rename_food_list"),
+        patch.object(screen, "render_lists"),
+    ):
+        screen.open_rename_popup(None)
+        popup = fake_popup.last
+
+        assert popup.title == "Rename list"
+        assert find_widget(popup.content, TextInput).text == "Pranzo"
+
+        find_widget(popup.content, TextInput).text = "Dinner"
+        find_widget(
+            popup.content, RoundedButton, text="Save"
+        ).dispatch("on_release")
+
+    assert selected["name"] == "Dinner"
+    assert app.active_list_label.text == "Active list: Dinner"
+
+
+def test_rename_popup_shows_english_validation_error(screen, fake_popup):
+    selected = {"id": 1, "name": "Pranzo"}
+    app = make_app(food_lists=[selected])
+    screen.refresh_texts("en")
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+    ):
+        screen.open_rename_popup(None)
+        popup = fake_popup.last
+        find_widget(popup.content, TextInput).text = "   "
+        find_widget(
+            popup.content, RoundedButton, text="Save"
+        ).dispatch("on_release")
+
+    assert popup_status(popup).text == "Enter a new name"
