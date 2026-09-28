@@ -22,6 +22,8 @@ from session_storage import (
 )
 from signup_screen import SignUpScreen
 from supabase_client import get_food_lists, get_foods
+from translations import translate
+from language_settings import load_language, save_language
 from ui_components import MenuButton, RoundedButton
 
 
@@ -36,6 +38,8 @@ Window.set_icon("images/icon.png")
 
 
 class FoodApp(App):
+    language = "it"
+
     def build(self):
         self.session = None
         self.token_refresh_at = None
@@ -43,6 +47,8 @@ class FoodApp(App):
         self.food_lists = []
         self.current_list_id = None
         self.current_list_name = ""
+        self.result_message_key = None
+        self.language = load_language(self.user_data_dir)
 
         home_screen = Screen(name="food")
         home_screen.add_widget(self.build_home())
@@ -96,27 +102,21 @@ class FoodApp(App):
         root.add_widget(background)
 
         self.title_label = Label(
-            text="Cosa mangiamo?",
+            text=translate(self.language, "home_title"),
             font_name="fonts/Pacifico-Regular.ttf",
             font_size=sp(34),
             markup=True,
             size_hint=(0.9, 0.10),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.79,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.79},
             color=(0.02, 0.35, 0.28, 1),
         )
 
         self.choose_button = RoundedButton(
-            text="Scegli per me",
+            text=translate(self.language, "choose_for_me"),
             font_size=sp(18),
             size_hint=(0.68, None),
             height=dp(48),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.62,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.62},
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
@@ -127,21 +127,15 @@ class FoodApp(App):
             font_size=sp(30),
             markup=True,
             size_hint=(0.9, 0.10),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.48,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.48},
             color=(0.02, 0.35, 0.28, 1),
         )
 
         self.active_list_label = Label(
-            text="Nessuna lista attiva",
+            text=translate(self.language, "no_active_list"),
             font_size=sp(16),
             size_hint=(0.9, 0.08),
-            pos_hint={
-                "center_x": 0.5,
-                "center_y": 0.20,
-            },
+            pos_hint={"center_x": 0.5, "center_y": 0.20},
             color=(0.02, 0.35, 0.28, 1),
         )
 
@@ -150,52 +144,49 @@ class FoodApp(App):
             size_hint=(None, None),
             width=dp(48),
             height=dp(48),
-            pos_hint={
-                "x": 0.03,
-                "top": 0.97,
-            },
+            pos_hint={"x": 0.03, "top": 0.97},
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
 
-        self.menu = DropDown(
-            auto_width=False,
-            width=dp(170),
-        )
+        self.menu = DropDown(auto_width=False, width=dp(170))
 
-        lists_button = RoundedButton(
-            text="Gestisci liste",
+        self.lists_button = RoundedButton(
+            text=translate(self.language, "manage_lists"),
             font_size=sp(17),
             size_hint_y=None,
             height=dp(48),
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
-        lists_button.bind(
-            on_release=self.open_food_lists_from_menu
-        )
+        self.lists_button.bind(on_release=self.open_food_lists_from_menu)
 
-        logout_button = RoundedButton(
-            text="Logout",
+        self.language_button = RoundedButton(
+            text="Italiano" if self.language == "en" else "English",
+            font_size=sp(17),
+            size_hint_y=None,
+            height=dp(48),
+            my_color=(0.10, 0.55, 0.45, 1),
+            color=(1, 1, 1, 1),
+        )
+        self.language_button.bind(on_release=self.toggle_language)
+
+        self.logout_button = RoundedButton(
+            text=translate(self.language, "logout"),
             font_size=sp(17),
             size_hint_y=None,
             height=dp(48),
             my_color=(0.55, 0.20, 0.20, 1),
             color=(1, 1, 1, 1),
         )
-        logout_button.bind(
-            on_release=self.logout_from_menu
-        )
+        self.logout_button.bind(on_release=self.logout_from_menu)
 
-        self.menu.add_widget(lists_button)
-        self.menu.add_widget(logout_button)
+        self.menu.add_widget(self.lists_button)
+        self.menu.add_widget(self.language_button)
+        self.menu.add_widget(self.logout_button)
 
-        self.menu_button.bind(
-            on_release=self.menu.open
-        )
-        self.choose_button.bind(
-            on_press=self.choose_food
-        )
+        self.menu_button.bind(on_release=self.menu.open)
+        self.choose_button.bind(on_press=self.choose_food)
 
         root.add_widget(self.title_label)
         root.add_widget(self.choose_button)
@@ -211,13 +202,8 @@ class FoodApp(App):
         expires_in = session.get("expires_in")
         if isinstance(expires_in, (int, float)):
             # Refresh 60 seconds early, or after 90% for short sessions.
-            seconds_until_refresh = max(
-                expires_in - 60,
-                expires_in * 0.9,
-            )
-            self.token_refresh_at = (
-                time.monotonic() + seconds_until_refresh
-            )
+            seconds_until_refresh = max(expires_in - 60, expires_in * 0.9)
+            self.token_refresh_at = time.monotonic() + seconds_until_refresh
         else:
             self.token_refresh_at = None
 
@@ -233,10 +219,7 @@ class FoodApp(App):
 
     def reload_food_lists(self):
         previous_list_id = self.current_list_id
-
-        self.food_lists = get_food_lists(
-            self.get_access_token()
-        )
+        self.food_lists = get_food_lists(self.get_access_token())
 
         selected_list = next(
             (
@@ -254,9 +237,7 @@ class FoodApp(App):
 
     def get_access_token(self):
         if not self.session:
-            raise RuntimeError(
-                "User is not authenticated"
-            )
+            raise RuntimeError("User is not authenticated")
 
         refresh_at = getattr(self, "token_refresh_at", None)
 
@@ -270,7 +251,7 @@ class FoodApp(App):
                     error.response is not None
                     and error.response.status_code in (400, 401)
                 ):
-                    # A rejected refresh token can no longer restore this session.
+                    # A rejected refresh token cannot restore this session.
                     clear_refresh_token(self.user_data_dir)
                     self.session = None
                     self.token_refresh_at = None
@@ -280,59 +261,96 @@ class FoodApp(App):
                 raise
 
             self.set_session(new_session)
+
         return self.session["access_token"]
 
     def get_user_id(self):
         if not self.session:
-            raise RuntimeError(
-                "User is not authenticated"
-            )
+            raise RuntimeError("User is not authenticated")
 
         return self.session["user"]["id"]
 
     def select_food_list(self, food_list):
         self.current_list_id = food_list["id"]
         self.current_list_name = food_list["name"]
-
         self.food = get_foods(
             self.current_list_id,
             self.get_access_token(),
         )
 
-        self.active_list_label.text = (
-            f"Lista attiva: {self.current_list_name}"
+        self.active_list_label.text = translate(
+            self.language,
+            "active_list",
+            name=self.current_list_name,
         )
+        self.result_message_key = None
         self.result.text = ""
 
     def clear_active_food_list(self):
         self.current_list_id = None
         self.current_list_name = ""
         self.food = []
-
-        self.active_list_label.text = (
-            "Nessuna lista attiva"
+        self.active_list_label.text = translate(
+            self.language, "no_active_list"
         )
+        self.result_message_key = None
         self.result.text = ""
 
     def open_food_lists_from_menu(self, instance):
         self.menu.dismiss()
         self.root.current = "food_lists"
 
+    def toggle_language(self, instance):
+        self.menu.dismiss()
+        next_language = "en" if self.language == "it" else "it"
+        self.set_language(next_language)
+
+    def set_language(self, language):
+        if language not in ("it", "en"):
+            raise ValueError(f"Unsupported language: {language}")
+
+        save_language(self.user_data_dir, language)
+        self.language = language
+        self.refresh_home_texts()
+
+    def refresh_home_texts(self):
+        self.title_label.text = translate(self.language, "home_title")
+        self.choose_button.text = translate(
+            self.language, "choose_for_me"
+        )
+        self.lists_button.text = translate(
+            self.language, "manage_lists"
+        )
+        self.logout_button.text = translate(self.language, "logout")
+        self.language_button.text = (
+            "Italiano" if self.language == "en" else "English"
+        )
+
+        if self.current_list_id is None:
+            self.active_list_label.text = translate(
+                self.language, "no_active_list"
+            )
+        else:
+            self.active_list_label.text = translate(
+                self.language,
+                "active_list",
+                name=self.current_list_name,
+            )
+
+        if getattr(self, "result_message_key", None):
+            message = translate(self.language, self.result_message_key)
+            self.result.text = f"[b]{message}[/b]"
+
     def logout(self):
         access_token = None
-
         if self.session:
-            access_token = self.session.get(
-                "access_token"
-            )
+            access_token = self.session.get("access_token")
 
         if access_token:
             try:
                 sign_out(access_token)
             except RequestException as error:
-                print(
-                    f"Logout Supabase fallito: {error}"
-                )
+                print(f"Logout Supabase fallito: {error}")
             else:
                 print("Logout Supabase riuscito")
 
@@ -349,20 +367,19 @@ class FoodApp(App):
 
     def choose_food(self, instance):
         if not self.current_list_id:
-            self.result.text = (
-                "[b]Crea prima una lista[/b]"
-            )
+            self.result_message_key = "create_list_first"
+            message = translate(self.language, self.result_message_key)
+            self.result.text = f"[b]{message}[/b]"
             return
 
         if not self.food:
-            self.result.text = (
-                "[b]Aggiungi prima qualche cibo[/b]"
-            )
+            self.result_message_key = "add_food_first"
+            message = translate(self.language, self.result_message_key)
+            self.result.text = f"[b]{message}[/b]"
             return
 
-        self.result.text = (
-            f"[b]{random.choice(self.food)}[/b]"
-        )
+        self.result_message_key = None
+        self.result.text = f"[b]{random.choice(self.food)}[/b]"
 
 
 if __name__ == "__main__":  # pragma: no cover
