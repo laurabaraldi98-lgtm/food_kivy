@@ -20,6 +20,13 @@ TEXTS = {
         "reset_email_sent": (
             "Controlla la tua email per reimpostare la password"
         ),
+        "create_account": "Crea account",
+        "have_account": "Hai già un account?",
+        "password_too_short": "La password deve avere almeno 6 caratteri",
+        "signup_failed": "Impossibile creare l'account",
+        "confirm_email": (
+            "Controlla la tua email per confermare l'account"
+        ),
     },
     "en": {
         "home_title": "What should we eat?",
@@ -40,6 +47,11 @@ TEXTS = {
         "email_required_for_reset": "Enter your email first",
         "reset_request_failed": "Could not send the reset email",
         "reset_email_sent": "Check your email to reset your password",
+        "create_account": "Create account",
+        "have_account": "Already have an account?",
+        "password_too_short": "Password must be at least 6 characters",
+        "signup_failed": "Could not create the account",
+        "confirm_email": "Check your email to confirm your account",
     },
 }
 

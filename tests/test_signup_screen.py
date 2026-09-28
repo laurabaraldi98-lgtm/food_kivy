@@ -178,3 +178,34 @@ def test_open_sign_in_changes_screen(screen):
 
     assert screen.status_label.text == ""
     assert manager.current == "auth"
+
+
+def test_refresh_texts_translates_signup_and_current_message(screen):
+    screen.get_credentials()
+
+    screen.refresh_texts("en")
+
+    assert screen.language_button.text == "Italiano"
+    assert screen.title_label.text == "Create account"
+    assert screen.create_account_button.text == "Create account"
+    assert screen.login_prompt.text == "Already have an account?"
+    assert screen.sign_in_button.text == "Sign in"
+    assert screen.status_label.text == "Enter email and password"
+
+    screen.refresh_texts("it")
+
+    assert screen.language_button.text == "English"
+    assert screen.title_label.text == "Crea account"
+    assert screen.status_label.text == "Inserisci email e password"
+
+
+def test_language_button_requests_change_from_app(screen):
+    app = SimpleNamespace(language="it", set_language=Mock())
+
+    with patch(
+        "signup_screen.App.get_running_app",
+        return_value=app,
+    ):
+        screen.toggle_language(None)
+
+    app.set_language.assert_called_once_with("en")

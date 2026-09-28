@@ -64,6 +64,10 @@ def test_saved_language_is_loaded_when_app_restarts(app):
     assert auth_screen.sign_in_button.text == "Sign in"
     assert auth_screen.language_button.text == "Italiano"
 
+    signup_screen = restarted_app.root.get_screen("signup")
+    assert signup_screen.title_label.text == "Create account"
+    assert signup_screen.language_button.text == "Italiano"
+
 
 def test_active_list_name_is_not_translated(app):
     app.current_list_id = 7
