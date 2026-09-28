@@ -869,3 +869,31 @@ def test_language_button_requests_change_from_app(screen):
 
     screen.menu.dismiss.assert_called_once_with()
     app.set_language.assert_called_once_with("en")
+
+
+@pytest.mark.parametrize(
+    ("shared", "expected_title", "expected_hint"),
+    [
+        (False, "Create personal list", "Personal list name"),
+        (True, "Create shared list", "Shared list name"),
+    ],
+)
+def test_create_popup_uses_english(
+    screen, fake_popup, shared, expected_title, expected_hint
+):
+    app = make_app()
+    screen.refresh_texts("en")
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.open_create_popup(None, shared=shared)
+        popup = fake_popup.last
+
+        assert popup.title == expected_title
+        assert find_widget(popup.content, TextInput).hint_text == expected_hint
+
+        create_button = find_widget(
+            popup.content, RoundedButton, text="Create"
+        )
+        create_button.dispatch("on_release")
+
+    assert popup_status(popup).text == "Enter a name for the list"

@@ -423,10 +423,9 @@ class FoodListsScreen(Screen):
         add_colored_background(layout)
 
         name_input = TextInput(
-            hint_text=(
-                "Nome lista condivisa"
-                if shared
-                else "Nome lista personale"
+            hint_text=translate(
+                self.language,
+                "shared_list_name" if shared else "personal_list_name",
             ),
             multiline=False,
             size_hint_y=None,
@@ -444,7 +443,7 @@ class FoodListsScreen(Screen):
         )
 
         create_button = RoundedButton(
-            text="Crea",
+            text=translate(self.language, "create"),
             size_hint_y=None,
             height=dp(42),
             my_color=(
@@ -460,10 +459,9 @@ class FoodListsScreen(Screen):
         layout.add_widget(create_button)
 
         popup = Popup(
-            title=(
-                "Crea lista condivisa"
-                if shared
-                else "Crea lista personale"
+            title=translate(
+                self.language,
+                "create_shared_list" if shared else "create_personal_list",
             ),
             title_size=sp(19),
             content=layout,
@@ -480,7 +478,7 @@ class FoodListsScreen(Screen):
             list_name = name_input.text.strip()
 
             if not list_name:
-                status.text = "Inserisci un nome per la lista"
+                status.text = translate(self.language, "list_name_required")
                 return
 
             if any(
@@ -488,7 +486,7 @@ class FoodListsScreen(Screen):
                 == list_name.casefold()
                 for food_list in app.food_lists
             ):
-                status.text = "Esiste già una lista con questo nome"
+                status.text = translate(self.language, "duplicate_list_name")
                 return
 
             created_group = None
@@ -521,7 +519,7 @@ class FoodListsScreen(Screen):
                     except RequestException:
                         pass
 
-                status.text = "Impossibile creare la lista"
+                status.text = translate(self.language, "create_list_failed")
                 return
 
             if created_group:
