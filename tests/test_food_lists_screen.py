@@ -944,3 +944,58 @@ def test_rename_popup_shows_english_validation_error(screen, fake_popup):
         ).dispatch("on_release")
 
     assert popup_status(popup).text == "Enter a new name"
+
+
+@pytest.mark.parametrize(
+    ("shared", "expected_text"),
+    [
+        (False, "Delete the list 'Pranzo'?"),
+        (True, "Delete the shared list 'Pranzo'?"),
+    ],
+)
+def test_delete_popup_uses_english(
+    screen, fake_popup, shared, expected_text
+):
+    selected = {"id": 1, "name": "Pranzo"}
+    if shared:
+        selected["group_id"] = 9
+
+    screen.refresh_texts("en")
+
+    with patch.object(
+        screen, "get_selected_list", return_value=selected
+    ):
+        screen.open_delete_popup(None)
+
+    popup = fake_popup.last
+    message = find_widget(popup.content, Label)
+
+    assert popup.title == "Confirm deletion"
+    assert expected_text in message.text
+    assert "Pranzo" in message.text
+    find_widget(popup.content, RoundedButton, text="Cancel")
+    find_widget(popup.content, RoundedButton, text="Delete")
+
+
+def test_delete_popup_shows_english_request_error(screen, fake_popup):
+    selected = {"id": 1, "name": "Pranzo"}
+    app = make_app(food_lists=[selected], current_list_id=1)
+    screen.refresh_texts("en")
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch(
+            "food_lists_screen.delete_food_list",
+            side_effect=RequestException,
+        ),
+    ):
+        screen.open_delete_popup(None)
+        popup = fake_popup.last
+        find_widget(
+            popup.content, RoundedButton, text="Delete"
+        ).dispatch("on_release")
+
+    assert find_widget(popup.content, Label).text == (
+        "Could not delete the list"
+    )

@@ -675,44 +675,46 @@ class FoodListsScreen(Screen):
             padding=dp(12),
         )
         add_colored_background(layout)
+
+        message_key = (
+            "delete_shared_confirm"
+            if food_list.get("group_id") is not None
+            else "delete_personal_confirm"
+        )
         message = Label(
-            text=(
-                (
-                    f"Eliminare la lista condivisa '{food_list['name']}'?\n"
-                    "Verranno eliminati anche tutti i suoi cibi.\n"
-                    "Tutti i membri perderanno l'accesso."
-                )
-                if food_list.get("group_id") is not None
-                else (
-                    f"Eliminare la lista '{food_list['name']}'?\n"
-                    "Verranno eliminati anche tutti i suoi cibi."
-                )
+            text=translate(
+                self.language,
+                message_key,
+                name=food_list["name"],
             ),
             color=(0.08, 0.25, 0.20, 1),
         )
+
         buttons = BoxLayout(
             orientation="horizontal",
             spacing=dp(8),
             size_hint_y=None,
             height=dp(48),
         )
+
         cancel_button = RoundedButton(
-            text="Annulla",
+            text=translate(self.language, "cancel"),
             my_color=(0.40, 0.40, 0.40, 1),
             color=(1, 1, 1, 1),
         )
         confirm_button = RoundedButton(
-            text="Elimina",
+            text=translate(self.language, "delete"),
             my_color=(0.65, 0.18, 0.18, 1),
             color=(1, 1, 1, 1),
         )
+
         buttons.add_widget(cancel_button)
         buttons.add_widget(confirm_button)
         layout.add_widget(message)
         layout.add_widget(buttons)
 
         popup = Popup(
-            title="Conferma eliminazione",
+            title=translate(self.language, "confirm_deletion"),
             title_size=sp(21),
             content=layout,
             size_hint=(0.80, None),
@@ -739,7 +741,9 @@ class FoodListsScreen(Screen):
                         app.get_access_token(),
                     )
             except RequestException:
-                message.text = "Impossibile eliminare la lista"
+                message.text = translate(
+                    self.language, "delete_list_failed"
+                )
                 return
 
             app.food_lists = [
@@ -802,6 +806,7 @@ class FoodListsScreen(Screen):
             size_hint_y=None,
             height=dp(48),
         )
+
         cancel_button = RoundedButton(
             text="Annulla",
             my_color=(0.40, 0.40, 0.40, 1),

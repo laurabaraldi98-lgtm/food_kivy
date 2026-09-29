@@ -46,6 +46,11 @@ TEXTS = {
         "save": "Salva",
         "new_name_required": "Inserisci un nuovo nome",
         "rename_list_failed": "Impossibile rinominare la lista",
+        "delete_personal_confirm": "Eliminare la lista '{name}'?\nVerranno eliminati anche tutti i suoi cibi.",
+        "delete_shared_confirm": "Eliminare la lista condivisa '{name}'?\nVerranno eliminati anche tutti i suoi cibi.\nTutti i membri perderanno l'accesso.",
+        "cancel": "Annulla",
+        "confirm_deletion": "Conferma eliminazione",
+        "delete_list_failed": "Impossibile eliminare la lista",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -94,6 +99,11 @@ TEXTS = {
         "save": "Save",
         "new_name_required": "Enter a new name",
         "rename_list_failed": "Could not rename the list",
+        "delete_personal_confirm": "Delete the list '{name}'?\nAll its foods will also be deleted.",
+        "delete_shared_confirm": "Delete the shared list '{name}'?\nAll its foods will also be deleted.\nAll members will lose access.",
+        "cancel": "Cancel",
+        "confirm_deletion": "Confirm deletion",
+        "delete_list_failed": "Could not delete the list",
     },
 }
 
