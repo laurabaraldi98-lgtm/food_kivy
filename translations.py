@@ -83,6 +83,9 @@ TEXTS = {
         "load_lists_failed": "Impossibile caricare le liste",
         "load_foods_failed": "Impossibile caricare i cibi",
         "open_members_failed": "Impossibile aprire i membri della lista",
+        "generate_recipe": "Genera ricetta",
+        "servings": "Persone",
+        "generate": "Genera",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -168,6 +171,9 @@ TEXTS = {
         "load_lists_failed": "Could not load lists",
         "load_foods_failed": "Could not load foods",
         "open_members_failed": "Could not open list members",
+        "generate_recipe": "Generate recipe",
+        "servings": "Servings",
+        "generate": "Generate",
     },
 }
 

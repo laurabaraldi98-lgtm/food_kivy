@@ -49,6 +49,8 @@ def app(tmp_path, monkeypatch):
     food_app.current_list_name = ""
     food_app.active_list_label = SimpleNamespace(text="")
     food_app.result = SimpleNamespace(text="")
+    food_app.selected_food = None
+    food_app.recipe_button = SimpleNamespace(disabled=True, opacity=0)
     food_app.root = SimpleNamespace(current="food")
 
     return food_app

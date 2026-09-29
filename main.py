@@ -16,6 +16,7 @@ from auth_client import refresh_session, sign_out
 from auth_screen import AuthScreen
 from food_lists_screen import FoodListsScreen
 from language_settings import load_language, save_language
+from recipe_popup import RecipePopup
 from session_storage import (
     clear_refresh_token,
     load_refresh_token,
@@ -143,6 +144,19 @@ class FoodApp(App):
             color=(0.02, 0.35, 0.28, 1),
         )
 
+        self.recipe_button = RoundedButton(
+            text=translate(self.language, "generate_recipe"),
+            font_size=sp(16),
+            size_hint=(0.60, None),
+            height=dp(44),
+            pos_hint={"center_x": 0.5, "center_y": 0.35},
+            opacity=0,
+            disabled=True,
+            my_color=(0.25, 0.55, 0.70, 1),
+            color=(1, 1, 1, 1),
+        )
+        self.recipe_button.bind(on_release=self.open_recipe_popup)
+
         self.active_list_label = Label(
             text=translate(self.language, "no_active_list"),
             font_size=sp(16),
@@ -227,6 +241,7 @@ class FoodApp(App):
         root.add_widget(self.title_label)
         root.add_widget(self.choose_button)
         root.add_widget(self.result)
+        root.add_widget(self.recipe_button)
         root.add_widget(self.active_list_label)
         root.add_widget(self.menu_button)
 
@@ -311,6 +326,13 @@ class FoodApp(App):
 
         return self.session["user"]["id"]
 
+    def set_selected_food(self, food):
+        # Keep the recipe button consistent with the selected dish.
+        self.selected_food = food
+        has_selection = food is not None
+        self.recipe_button.disabled = not has_selection
+        self.recipe_button.opacity = 1 if has_selection else 0
+
     def select_food_list(self, food_list):
         self.current_list_id = food_list["id"]
         self.current_list_name = food_list["name"]
@@ -324,7 +346,7 @@ class FoodApp(App):
             "active_list",
             name=self.current_list_name,
         )
-        self.selected_food = None
+        self.set_selected_food(None)
         self.result_message_key = None
         self.result.text = ""
 
@@ -335,9 +357,15 @@ class FoodApp(App):
         self.active_list_label.text = translate(
             self.language, "no_active_list"
         )
-        self.selected_food = None
+        self.set_selected_food(None)
         self.result_message_key = None
         self.result.text = ""
+
+    def open_recipe_popup(self, instance):
+        if self.selected_food is None:
+            return
+
+        RecipePopup(self.selected_food, self.language).open()
 
     def open_food_lists_from_menu(self, instance):
         self.menu.dismiss()
@@ -368,6 +396,7 @@ class FoodApp(App):
         self.choose_button.text = translate(
             self.language, "choose_for_me"
         )
+        self.recipe_button.text = translate(self.language, "generate_recipe")
         self.lists_button.text = translate(
             self.language, "manage_lists"
         )
@@ -421,7 +450,7 @@ class FoodApp(App):
         self.logout()
 
     def choose_food(self, instance):
-        self.selected_food = None
+        self.set_selected_food(None)
 
         if not self.current_list_id:
             self.result_message_key = "create_list_first"
@@ -436,7 +465,7 @@ class FoodApp(App):
             return
 
         # Keep the dish separately from its formatted display text.
-        self.selected_food = random.choice(self.food)
+        self.set_selected_food(random.choice(self.food))
         self.result_message_key = None
         self.result.text = f"[b]{self.selected_food}[/b]"
 
