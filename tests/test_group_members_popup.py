@@ -369,3 +369,59 @@ def test_remove_member_displays_request_error():
     assert "Impossibile rimuovere il membro" in widget_texts(
         popup.content, Label
     )
+
+
+def test_owner_sees_members_popup_in_english():
+    app = make_app()
+    app.language = "en"
+
+    with (
+        patch("group_members_popup.App.get_running_app", return_value=app),
+        patch("group_members_popup.Popup", FakePopup),
+        patch("group_members_popup.get_group_members", return_value=MEMBERS),
+        patch("group_members_popup.add_group_member") as add,
+    ):
+        show_group_members_popup(OWNER_GROUP)
+        popup = FakePopup.last
+
+        assert popup.title == "Members - Famiglia"
+        assert find_widget(
+            popup.content, TextInput, hint_text="New member email"
+        )
+        assert {"Add", "Remove", "Close"} <= widget_texts(
+            popup.content, RoundedButton
+        )
+        assert "owner@example.com\nowner" in widget_texts(
+            popup.content, Label
+        )
+        assert "member@example.com\nmember" in widget_texts(
+            popup.content, Label
+        )
+
+        find_widget(
+            popup.content, RoundedButton, text="Add"
+        ).dispatch("on_release")
+
+    add.assert_not_called()
+    assert "Enter an email address" in widget_texts(
+        popup.content, Label
+    )
+
+
+def test_member_sees_read_only_popup_in_english():
+    app = make_app(user_id="member-2")
+    app.language = "en"
+
+    with (
+        patch("group_members_popup.App.get_running_app", return_value=app),
+        patch("group_members_popup.Popup", FakePopup),
+        patch("group_members_popup.get_group_members", return_value=MEMBERS),
+    ):
+        show_group_members_popup(OWNER_GROUP)
+
+    popup = FakePopup.last
+    assert popup.title == "Members - Famiglia"
+    assert widget_texts(popup.content, RoundedButton) == {"Close"}
+    assert "member@example.com\nmember" in widget_texts(
+        popup.content, Label
+    )

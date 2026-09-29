@@ -13,6 +13,7 @@ from supabase_client import (
     get_group_members,
     remove_group_member,
 )
+from translations import translate
 from ui_components import RoundedButton
 
 
@@ -40,6 +41,7 @@ def add_colored_background(widget):
 
 def show_group_members_popup(group):
     app = App.get_running_app()
+    language = getattr(app, "language", "it")
     is_owner = group["owner_id"] == app.get_user_id()
     members = []
 
@@ -83,14 +85,14 @@ def show_group_members_popup(group):
         )
 
         email_input = TextInput(
-            hint_text="Email del nuovo membro",
+            hint_text=translate(language, "member_email_hint"),
             multiline=False,
             font_size=sp(14),
             padding=(dp(8), dp(8)),
         )
 
         add_button = RoundedButton(
-            text="Aggiungi",
+            text=translate(language, "add"),
             font_size=sp(13),
             size_hint_x=0.35,
             my_color=(0.10, 0.55, 0.45, 1),
@@ -104,7 +106,7 @@ def show_group_members_popup(group):
     layout.add_widget(status)
 
     close_button = RoundedButton(
-        text="Chiudi",
+        text=translate(language, "close"),
         font_size=sp(15),
         size_hint_y=None,
         height=dp(44),
@@ -114,7 +116,7 @@ def show_group_members_popup(group):
     layout.add_widget(close_button)
 
     popup = Popup(
-        title=f"Membri - {group['name']}",
+        title=translate(language, "members_popup_title", name=group["name"]),
         title_size=sp(19),
         content=layout,
         size_hint=(0.90, None),
@@ -135,11 +137,11 @@ def show_group_members_popup(group):
             return default
 
         if "already a member" in message:
-            return "Questo utente è già nella lista"
+            return translate(language, "member_already_exists")
         if "user not found" in message:
-            return "Nessun utente trovato con questa email"
+            return translate(language, "member_not_found")
         if "only the group owner" in message:
-            return "Solo il proprietario può aggiungere membri"
+            return translate(language, "owner_only_add_members")
 
         return default
 
@@ -152,7 +154,7 @@ def show_group_members_popup(group):
                 app.get_access_token(),
             )
         except RequestException:
-            status.text = "Impossibile caricare i membri"
+            status.text = translate(language, "load_members_failed")
             return
 
         members_container.clear_widgets()
@@ -165,10 +167,9 @@ def show_group_members_popup(group):
                 height=dp(44),
             )
 
-            role_text = (
-                "proprietario"
-                if member["role"] == "owner"
-                else "membro"
+            role_text = translate(
+                language,
+                "owner_role" if member["role"] == "owner" else "member_role",
             )
             member_label = Label(
                 text=f"{member['email']}\n{role_text}",
@@ -188,7 +189,7 @@ def show_group_members_popup(group):
 
             if is_owner and member["role"] != "owner":
                 remove_button = RoundedButton(
-                    text="Rimuovi",
+                    text=translate(language, "remove"),
                     font_size=sp(12),
                     size_hint_x=0.30,
                     my_color=(0.65, 0.18, 0.18, 1),
@@ -216,7 +217,7 @@ def show_group_members_popup(group):
         except RequestException as error:
             status.text = error_message(
                 error,
-                "Impossibile rimuovere il membro",
+                translate(language, "remove_member_failed"),
             )
             return
 
@@ -227,7 +228,7 @@ def show_group_members_popup(group):
             email = email_input.text.strip().lower()
 
             if not email:
-                status.text = "Inserisci un indirizzo email"
+                status.text = translate(language, "email_required")
                 return
 
             if any(
@@ -235,7 +236,7 @@ def show_group_members_popup(group):
                 == email.casefold()
                 for member in members
             ):
-                status.text = "Questo utente è già nella lista"
+                status.text = translate(language, "member_already_exists")
                 return
 
             try:
@@ -247,7 +248,7 @@ def show_group_members_popup(group):
             except RequestException as error:
                 status.text = error_message(
                     error,
-                    "Impossibile aggiungere il membro",
+                    translate(language, "add_member_failed"),
                 )
                 return
 
