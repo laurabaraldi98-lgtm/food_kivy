@@ -11,10 +11,13 @@ from kivy.utils import platform
 from requests import RequestException
 
 from supabase_client import add_food, delete_food
+from translations import translate
 from ui_components import RoundedButton
 
 
 def show_food_popup(app):
+    language = getattr(app, "language", "it")
+
     popup_layout = BoxLayout(
         orientation="vertical",
         padding=(dp(18), dp(10), dp(18), dp(12)),
@@ -50,7 +53,7 @@ def show_food_popup(app):
     )
 
     label = Label(
-        text="\n".join(app.food) or "Lista vuota",
+        text="\n".join(app.food) or translate(language, "empty_food_list"),
         font_size=sp(22),
         color=(0.02, 0.35, 0.28, 1),
         size_hint_y=None,
@@ -89,7 +92,7 @@ def show_food_popup(app):
     form_layout.height = control_height * 2 + status_height + form_spacing * 2
 
     food_input = TextInput(
-        hint_text="Nome del cibo",
+        hint_text=translate(language, "food_name_hint"),
         multiline=False,
         font_size=sp(15),
         size_hint_y=None,
@@ -105,14 +108,14 @@ def show_food_popup(app):
     )
 
     add_button = RoundedButton(
-        text="Aggiungi",
+        text=translate(language, "add"),
         font_size=sp(15),
         my_color=(0.10, 0.55, 0.45, 1),
         color=(1, 1, 1, 1),
     )
 
     delete_button = RoundedButton(
-        text="Elimina",
+        text=translate(language, "delete"),
         font_size=sp(15),
         my_color=(0.65, 0.18, 0.18, 1),
         color=(1, 1, 1, 1),
@@ -159,13 +162,18 @@ def show_food_popup(app):
         status_label.text = ""
 
     def refresh_list():
-        label.text = "\n".join(app.food) or "Lista vuota"
+        label.text = (
+            "\n".join(app.food)
+            or translate(language, "empty_food_list")
+        )
 
     def add_food_from_popup(instance):
         new_food = food_input.text.strip()
 
         if not new_food:
-            status_label.text = "Scrivi un cibo da aggiungere"
+            status_label.text = translate(
+                language, "food_to_add_required"
+            )
             return
 
         new_food = new_food[0].upper() + new_food[1:]
@@ -174,7 +182,9 @@ def show_food_popup(app):
             food.casefold() == new_food.casefold()
             for food in app.food
         ):
-            status_label.text = f"{new_food} è già nella lista"
+            status_label.text = translate(
+                language, "food_already_in_list", name=new_food
+            )
         else:
             try:
                 add_food(
@@ -183,13 +193,17 @@ def show_food_popup(app):
                     app.get_access_token(),
                 )
             except RequestException:
-                status_label.text = "Impossibile aggiungere il cibo"
+                status_label.text = translate(
+                    language, "add_food_failed"
+                )
                 return
 
             app.food.append(new_food)
             app.food.sort(key=str.casefold)
             refresh_list()
-            status_label.text = f"Aggiunto: {new_food}"
+            status_label.text = translate(
+                language, "food_added", name=new_food
+            )
 
         Clock.schedule_once(clear_status, 3)
         food_input.text = ""
@@ -198,7 +212,9 @@ def show_food_popup(app):
         typed_name = food_input.text.strip()
 
         if not typed_name:
-            status_label.text = "Scrivi un cibo da eliminare"
+            status_label.text = translate(
+                language, "food_to_delete_required"
+            )
             return
 
         food_to_delete = next(
@@ -211,7 +227,9 @@ def show_food_popup(app):
         )
 
         if not food_to_delete:
-            status_label.text = f"{typed_name} non è nella lista"
+            status_label.text = translate(
+                language, "food_not_in_list", name=typed_name
+            )
         else:
             try:
                 delete_food(
@@ -220,12 +238,16 @@ def show_food_popup(app):
                     app.get_access_token(),
                 )
             except RequestException:
-                status_label.text = "Impossibile eliminare il cibo"
+                status_label.text = translate(
+                    language, "delete_food_failed"
+                )
                 return
 
             app.food.remove(food_to_delete)
             refresh_list()
-            status_label.text = f"Eliminato: {food_to_delete}"
+            status_label.text = translate(
+                language, "food_deleted", name=food_to_delete
+            )
 
         Clock.schedule_once(clear_status, 3)
         food_input.text = ""
@@ -234,7 +256,9 @@ def show_food_popup(app):
     delete_button.bind(on_press=delete_food_from_popup)
 
     popup = Popup(
-        title=f"Cibi - {app.current_list_name}",
+        title=translate(
+            language, "food_popup_title", name=app.current_list_name
+        ),
         title_size=sp(22),
         content=popup_layout,
         size_hint=(0.84, 0.84),

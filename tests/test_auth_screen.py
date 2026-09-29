@@ -13,9 +13,7 @@ def screen():
     return AuthScreen(name="auth")
 
 
-def test_get_background_source_uses_tall_image_for_narrow_screen(
-    screen,
-):
+def test_get_background_source_uses_tall_image_for_narrow_screen(screen):
     window = SimpleNamespace(width=300, height=800)
 
     with patch("auth_screen.Window", window):
@@ -40,10 +38,7 @@ def test_get_credentials_requires_email_and_password(screen):
     result = screen.get_credentials()
 
     assert result is None
-    assert (
-        screen.status_label.text
-        == "Inserisci email e password"
-    )
+    assert screen.status_label.text == "Inserisci email e password"
 
 
 def test_get_credentials_normalizes_email(screen):
@@ -52,15 +47,10 @@ def test_get_credentials_normalizes_email(screen):
 
     result = screen.get_credentials()
 
-    assert result == (
-        "laura@example.com",
-        "secure-password",
-    )
+    assert result == ("laura@example.com", "secure-password")
 
 
-def test_handle_sign_in_stops_when_credentials_are_missing(
-    screen,
-):
+def test_handle_sign_in_stops_when_credentials_are_missing(screen):
     screen.email_input.text = ""
     screen.password_input.text = ""
 
@@ -73,66 +63,38 @@ def test_handle_sign_in_stops_when_credentials_are_missing(
 def test_handle_sign_in_opens_food_screen(screen):
     screen.email_input.text = "laura@example.com"
     screen.password_input.text = "secure-password"
-
-    session = {
-        "access_token": "test-token",
-    }
-
-    app = SimpleNamespace(
-        open_food_screen=Mock(),
-    )
+    session = {"access_token": "test-token"}
+    app = SimpleNamespace(open_food_screen=Mock())
 
     with (
-        patch(
-            "auth_screen.sign_in",
-            return_value=session,
-        ) as mock_sign_in,
-        patch(
-            "auth_screen.App.get_running_app",
-            return_value=app,
-        ),
+        patch("auth_screen.sign_in", return_value=session) as mock_sign_in,
+        patch("auth_screen.App.get_running_app", return_value=app),
     ):
         screen.handle_sign_in(None)
 
     mock_sign_in.assert_called_once_with(
-        "laura@example.com",
-        "secure-password",
+        "laura@example.com", "secure-password"
     )
-
-    app.open_food_screen.assert_called_once_with(
-        session,
-    )
-
+    app.open_food_screen.assert_called_once_with(session)
     assert screen.status_label.text == ""
 
 
-def test_handle_sign_in_displays_error_when_request_fails(
-    screen,
-):
+def test_handle_sign_in_displays_error_when_request_fails(screen):
     screen.email_input.text = "laura@example.com"
     screen.password_input.text = "wrong-password"
 
-    with patch(
-        "auth_screen.sign_in",
-        side_effect=RequestException,
-    ):
+    with patch("auth_screen.sign_in", side_effect=RequestException):
         screen.handle_sign_in(None)
 
-    assert (
-        screen.status_label.text
-        == "Email o password non corretti"
-    )
+    assert screen.status_label.text == "Email o password non corretti"
 
 
 def test_open_sign_up_changes_screen(screen):
     manager = ScreenManager()
     manager.add_widget(screen)
-    manager.add_widget(
-        Screen(name="signup"),
-    )
+    manager.add_widget(Screen(name="signup"))
 
     screen.status_label.text = "Old message"
-
     screen.open_sign_up(None)
 
     assert screen.status_label.text == ""
@@ -142,39 +104,26 @@ def test_open_sign_up_changes_screen(screen):
 def test_password_reset_requires_email(screen):
     screen.email_input.text = ""
 
-    with patch(
-        "auth_screen.request_password_reset",
-    ) as mock_reset:
+    with patch("auth_screen.request_password_reset") as mock_reset:
         screen.handle_password_reset(None)
 
     mock_reset.assert_not_called()
-
-    assert (
-        screen.status_label.text
-        == "Inserisci prima la tua email"
-    )
+    assert screen.status_label.text == "Inserisci prima la tua email"
 
 
 def test_password_reset_sends_normalized_email(screen):
     screen.email_input.text = "  LAURA@EXAMPLE.COM  "
 
-    with patch(
-        "auth_screen.request_password_reset",
-    ) as mock_reset:
+    with patch("auth_screen.request_password_reset") as mock_reset:
         screen.handle_password_reset(None)
 
-    mock_reset.assert_called_once_with(
-        "laura@example.com",
-    )
-
+    mock_reset.assert_called_once_with("laura@example.com")
     assert screen.status_label.text == (
         "Controlla la tua email per reimpostare la password"
     )
 
 
-def test_password_reset_displays_error_when_request_fails(
-    screen,
-):
+def test_password_reset_displays_error_when_request_fails(screen):
     screen.email_input.text = "laura@example.com"
 
     with patch(
@@ -186,3 +135,31 @@ def test_password_reset_displays_error_when_request_fails(
     assert screen.status_label.text == (
         "Impossibile inviare l'email di recupero"
     )
+
+
+def test_refresh_texts_translates_login_and_current_message(screen):
+    screen.get_credentials()
+
+    screen.refresh_texts("en")
+
+    assert screen.language_button.background_normal == "images/flag_it.png"
+    assert screen.sign_in_button.text == "Sign in"
+    assert screen.forgot_password_button.text == "Forgot password?"
+    assert screen.account_prompt.text == "Don't have an account?"
+    assert screen.sign_up_button.text == "Create one"
+    assert screen.status_label.text == "Enter email and password"
+
+    screen.refresh_texts("it")
+
+    assert screen.language_button.background_normal == "images/flag_en.png"
+    assert screen.sign_in_button.text == "Accedi"
+    assert screen.status_label.text == "Inserisci email e password"
+
+
+def test_language_button_requests_change_from_app(screen):
+    app = SimpleNamespace(language="it", set_language=Mock())
+
+    with patch("auth_screen.App.get_running_app", return_value=app):
+        screen.toggle_language(None)
+
+    app.set_language.assert_called_once_with("en")

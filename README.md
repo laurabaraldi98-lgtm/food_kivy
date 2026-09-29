@@ -8,11 +8,13 @@ Food App helps users decide what to eat by selecting a random item from one of t
 
 The application supports persistent login. Refresh tokens are stored using the operating system's secure credential storage on desktop and Android Keystore on Android.
 
-The interface is currently in Italian.
+The interface is available in Italian and English. Users can change language from the login and registration screens or from the application menus. The choice is saved on the device. List names and food names entered by users are never translated automatically.
 
 ---
 
 ## Screenshots
+
+The screenshots below show the Italian interface.
 
 | Login | Home |
 | :---: | :---: |
@@ -49,6 +51,7 @@ What began as a local Python project gradually evolved into a cross-platform app
 - personal and shared data;
 - PostgreSQL Row Level Security;
 - secure credential storage;
+- an Italian and English interface;
 - Android packaging;
 - automated testing;
 - continuous integration.
@@ -100,8 +103,14 @@ What began as a local Python project gradually evolved into a cross-platform app
 - Immediate persistence in Supabase
 - Shared changes visible to every authorized member
 
-### Interface
+### Interface and languages
 
+- Italian and English interface text
+- Language controls on the login and registration screens
+- Language controls in the home and food-list menus
+- Custom flag images for the language controls
+- Language preference saved locally and restored after restarting the application
+- User-entered list names and food names preserved in their original language
 - Responsive Kivy layouts
 - Reusable rounded buttons
 - Custom hamburger menu button
@@ -118,8 +127,8 @@ What began as a local Python project gradually evolved into a cross-platform app
 
 ### Testing and automation
 
-- 166 automated tests
-- 100% statement coverage across the Python modules measured in CI
+- Automated tests for application behaviour and both interface languages
+- A 100% statement-coverage requirement for the Python modules measured in CI
 - Tests for secure-storage integration without accessing real credentials
 - GitHub Actions CI on pushes and pull requests
 - Headless Kivy testing with Xvfb
@@ -130,17 +139,18 @@ What began as a local Python project gradually evolved into a cross-platform app
 
 ## How It Works
 
-When the application starts, it looks for a saved refresh token in the device's secure credential storage.
+When the application starts, it loads the saved language preference and looks for a saved refresh token in the device's secure credential storage.
 
 If a token is available, the application asks Supabase to renew the session and opens the food screen. Otherwise, it displays the login screen.
 
 Users can:
 
+- change the interface language;
 - sign in with an existing account;
 - open the registration screen;
 - request a password-reset email.
 
-New accounts can receive a confirmation email through Supabase. Authentication redirects are handled by responsive pages hosted with GitHub Pages:
+New accounts can receive a confirmation email through Supabase. Authentication redirects are handled by pages hosted with GitHub Pages:
 
 ```text
 https://laurabaraldi98-lgtm.github.io/food_kivy/
@@ -160,7 +170,7 @@ The user can then:
 2. create or select a list;
 3. add or remove foods;
 4. return to the home screen;
-5. press **Scegli per me**;
+5. press **Scegli per me** or **Choose for me**;
 6. receive a randomly selected food from the active list.
 
 Changes are sent immediately to Supabase, so lists and foods remain available after the application is closed.
@@ -186,6 +196,18 @@ If secure storage is unavailable, the application does not save the refresh toke
 Older versions stored the refresh token in a local `session.json` file. When that file is encountered, the application attempts to move its token to secure storage and removes the old plaintext file. If the migration cannot be completed securely, the old file is removed and the user must sign in again.
 
 Tests replace the operating-system storage with in-memory fakes. They do not read or modify a developer's real saved credentials.
+
+---
+
+## Language Settings
+
+`translations.py` contains the Italian and English interface strings. Screens and popups request a string by its key, then display it in the selected language.
+
+`language_settings.py` saves the selected language in the application's local data directory. The preference is restored when the application starts again. Unlike a refresh token, the language setting is not a secret and does not require encrypted storage.
+
+The language controls appear on the login and registration screens, as well as in the home and food-list menus. Switching languages updates the application's interface text. A popup opened after the change uses the selected language.
+
+Only interface text is translated. For example, a list named `Cena` remains `Cena` when the interface is switched to English. Food names, list names, and email addresses are treated as user data.
 
 ---
 
@@ -244,7 +266,7 @@ The owner cannot currently leave or transfer ownership. Ownership transfer may b
 
 Responsibilities are separated across multiple modules:
 
-- `main.py` manages application state, session renewal, the active list, and screen navigation;
+- `main.py` manages application state, session renewal, the active list, language changes, and screen navigation;
 - `auth_client.py` communicates with Supabase Authentication;
 - `session_storage.py` selects secure token storage and handles migration from the older local file;
 - `desktop_token_store.py` uses supported desktop credential stores through `keyring`;
@@ -254,8 +276,11 @@ Responsibilities are separated across multiple modules:
 - `auth_screen.py` implements login and password reset;
 - `signup_screen.py` implements registration;
 - `food_lists_screen.py` manages personal and shared lists;
+- `food_list_popups.py` contains the list creation, rename, delete, and leave popups;
 - `food_popup.py` manages foods inside the active list;
 - `group_members_popup.py` manages shared-list members;
+- `translations.py` contains the Italian and English interface strings;
+- `language_settings.py` saves and loads the language preference;
 - `ui_components.py` contains reusable Kivy widgets.
 
 The application uses standard HTTP requests instead of the full Supabase Python SDK.
@@ -370,7 +395,7 @@ The application uses a Kivy `ScreenManager` to navigate between:
 The main screen displays:
 
 - the active food list;
-- the **Scegli per me** button;
+- the random-choice button;
 - the randomly selected result;
 - the hamburger navigation button.
 
@@ -382,11 +407,7 @@ If the active list is empty, the user is asked to add foods first.
 
 The list-management screen displays personal and shared lists together.
 
-Shared lists are marked with:
-
-```text
-(condivisa)
-```
+Shared lists are marked with `(condivisa)` in Italian or `(shared)` in English. The list name itself stays as the user entered it.
 
 Selecting a list reveals its available actions.
 
@@ -398,8 +419,7 @@ The food-management popup contains:
 
 - a scrollable list of foods;
 - one text field;
-- an **Aggiungi** button;
-- an **Elimina** button;
+- buttons to add and delete foods;
 - status feedback.
 
 The same input is used for both adding and deleting a food. The two action buttons are displayed side by side and use the reusable `RoundedButton` component.
@@ -567,6 +587,12 @@ Refresh tokens are stored in supported desktop credential stores or encrypted us
 
 The Android implementation was compiled into an APK and tested on a physical phone for login persistence and logout.
 
+### 12. Italian and English interface
+
+Interface strings were moved into a shared translation table and connected to the application's screens and popups.
+
+Users can switch languages from the login and registration screens or from the menus after signing in. The language choice is saved on the device, while list names and food names remain unchanged.
+
 ---
 
 ## Technologies
@@ -630,13 +656,14 @@ food_kivy/
 │           └── security/
 │               └── TokenVault.java
 ├── docs/
-│   ├── index.html
-│   └── reset-password.html
+│   └── index.html
 ├── fonts/
 │   └── Pacifico-Regular.ttf
 ├── images/
 │   ├── background.png
 │   ├── background_tall.png
+│   ├── flag_en.png
+│   ├── flag_it.png
 │   └── icon.png
 ├── screenshots/
 │   ├── food-lists.png
@@ -656,13 +683,17 @@ food_kivy/
 │   ├── .gitignore
 │   └── config.toml
 ├── tests/
+│   ├── food_lists_test_helpers.py
 │   ├── test_android_token_store.py
 │   ├── test_auth_client.py
 │   ├── test_auth_screen.py
 │   ├── test_desktop_token_store.py
+│   ├── test_food_list_popups.py
 │   ├── test_food_lists_screen.py
 │   ├── test_food_popup.py
 │   ├── test_group_members_popup.py
+│   ├── test_language_settings.py
+│   ├── test_language_ui.py
 │   ├── test_main.py
 │   ├── test_session_storage.py
 │   ├── test_signup_screen.py
@@ -674,14 +705,18 @@ food_kivy/
 ├── auth_screen.py
 ├── buildozer.spec
 ├── desktop_token_store.py
+├── food_list_popups.py
 ├── food_lists_screen.py
 ├── food_popup.py
 ├── group_members_popup.py
+├── language_settings.py
 ├── main.py
+├── make_flags.py
 ├── pytest.ini
 ├── session_storage.py
 ├── signup_screen.py
 ├── supabase_client.py
+├── translations.py
 ├── ui_components.py
 └── README.md
 ```
@@ -757,10 +792,10 @@ python -m pytest
 Run the tests with the same coverage requirement used by GitHub Actions:
 
 ```bash
-python -m pytest --cov=auth_client --cov=android_token_store --cov=desktop_token_store --cov=auth_screen --cov=food_lists_screen --cov=food_popup --cov=group_members_popup --cov=main --cov=session_storage --cov=signup_screen --cov=supabase_client --cov=ui_components --cov-report=term-missing --cov-fail-under=100
+python -m pytest --cov=auth_client --cov=android_token_store --cov=desktop_token_store --cov=auth_screen --cov=food_lists_screen --cov=food_list_popups --cov=food_popup --cov=group_members_popup --cov=language_settings --cov=main --cov=session_storage --cov=signup_screen --cov=supabase_client --cov=translations --cov=ui_components --cov-report=term-missing --cov-fail-under=100
 ```
 
-The current suite contains **166 tests** and maintains **100% statement coverage** across the Python modules measured in CI.
+GitHub Actions requires 100% statement coverage across the selected Python modules.
 
 These tests do not compile or execute `TokenVault.java`. The Android build verifies compilation, and installation on a physical device verifies the login and logout flow.
 
@@ -801,7 +836,7 @@ icon.filename = images/icon.png
 
 The **Build APK** GitHub Actions workflow runs automatically on pushes to `main`. It can also be started manually for a selected branch using **Run workflow**.
 
-The APK for this branch was built and tested on a physical Android phone. The application retained the login after being closed and reopened, and returned to the login screen after logout and reopening.
+The Android APK has been tested on a physical phone for persistent login and logout: the application retained the login after being closed and reopened, and returned to the login screen after logout and reopening.
 
 ---
 
@@ -814,7 +849,6 @@ The APK for this branch was built and tested on a physical Android phone. The ap
 - The application requires an Internet connection for remote data operations.
 - Network errors have limited user-facing feedback.
 - Offline caching and retry handling are not implemented.
-- The interface is available only in Italian.
 - Persistent login depends on an available secure credential store on the device.
 - Access tokens that have already been issued remain valid until their expiry even after the corresponding refresh token is revoked.
 
@@ -849,7 +883,8 @@ This project provided practical experience with:
 - reusable functions and UI components;
 - external configuration;
 - validation and exception handling;
-- synchronization between local and remote state.
+- synchronization between local and remote state;
+- managing interface translations and locally saved preferences.
 
 ### Kivy and Android
 
@@ -888,8 +923,9 @@ This project provided practical experience with:
 - patching application dependencies;
 - testing Kivy widgets and nested callbacks;
 - testing platform-specific behaviour;
+- testing Italian and English interface behaviour;
 - keeping tests isolated from real credentials;
-- maintaining 100% statement coverage;
+- maintaining a 100% statement-coverage requirement;
 - Git branches, commits, pull requests, and merges;
 - GitHub Actions and automated builds.
 
@@ -911,9 +947,9 @@ The current version includes:
 - PostgreSQL Row Level Security;
 - persistent remote data;
 - random food selection;
+- Italian and English interface text with a saved language preference;
 - responsive desktop and Android layouts;
-- custom application branding;
-- 166 automated tests;
-- 100% statement coverage across the Python modules measured in CI.
+- custom application branding and language-control flag images;
+- automated tests with a 100% statement-coverage requirement in CI.
 
 The authentication flow, personal lists, shared lists, member management, and food operations work on desktop. The persistent-login and logout flow has also been verified on a physical Android phone.

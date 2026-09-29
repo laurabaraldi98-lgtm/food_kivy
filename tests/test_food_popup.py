@@ -305,3 +305,90 @@ def test_delete_food_displays_request_error():
         controls.status.text
         == "Impossibile eliminare il cibo"
     )
+
+
+def test_food_popup_uses_english_without_translating_food_names():
+    app = make_app(["Pasta"])
+    app.language = "en"
+
+    popup = open_popup(app)
+    list_label = find_widget(popup.content, Label, halign="left")
+    status = find_widget(popup.content, Label, text="")
+    food_input = find_widget(
+        popup.content, TextInput, hint_text="Food name"
+    )
+    add_button = find_widget(
+        popup.content, RoundedButton, text="Add"
+    )
+    delete_button = find_widget(
+        popup.content, RoundedButton, text="Delete"
+    )
+
+    assert popup.title == "Foods - Cena"
+    assert list_label.text == "Pasta"
+
+    food_input.text = "pasta"
+    add_button.dispatch("on_press")
+    assert status.text == "Pasta is already in the list"
+
+    food_input.text = "pizza"
+    with patch("food_popup.add_food") as mock_add:
+        add_button.dispatch("on_press")
+
+    mock_add.assert_called_once_with("Pizza", 7, "test-token")
+    assert list_label.text == "Pasta\nPizza"
+    assert status.text == "Added: Pizza"
+
+    food_input.text = "pasta"
+    with patch("food_popup.delete_food") as mock_delete:
+        delete_button.dispatch("on_press")
+
+    mock_delete.assert_called_once_with("Pasta", 7, "test-token")
+    assert list_label.text == "Pizza"
+    assert status.text == "Deleted: Pasta"
+
+
+def test_food_popup_shows_english_empty_and_error_messages():
+    app = make_app()
+    app.language = "en"
+
+    popup = open_popup(app)
+    list_label = find_widget(popup.content, Label, halign="left")
+    status = find_widget(popup.content, Label, text="")
+    food_input = find_widget(
+        popup.content, TextInput, hint_text="Food name"
+    )
+    add_button = find_widget(
+        popup.content, RoundedButton, text="Add"
+    )
+    delete_button = find_widget(
+        popup.content, RoundedButton, text="Delete"
+    )
+
+    assert list_label.text == "Empty list"
+
+    add_button.dispatch("on_press")
+    assert status.text == "Enter a food to add"
+
+    food_input.text = "Pasta"
+    with patch(
+        "food_popup.add_food", side_effect=RequestException
+    ):
+        add_button.dispatch("on_press")
+    assert status.text == "Could not add the food"
+
+    food_input.text = ""
+    delete_button.dispatch("on_press")
+    assert status.text == "Enter a food to delete"
+
+    food_input.text = "Pizza"
+    delete_button.dispatch("on_press")
+    assert status.text == "Pizza is not in the list"
+
+    app.food.append("Pasta")
+    food_input.text = "Pasta"
+    with patch(
+        "food_popup.delete_food", side_effect=RequestException
+    ):
+        delete_button.dispatch("on_press")
+    assert status.text == "Could not delete the food"

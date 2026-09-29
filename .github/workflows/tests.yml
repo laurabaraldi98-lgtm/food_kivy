@@ -46,12 +46,15 @@ jobs:
             --cov=desktop_token_store \
             --cov=auth_screen \
             --cov=food_lists_screen \
+            --cov=food_list_popups \
             --cov=food_popup \
             --cov=group_members_popup \
+            --cov=language_settings \
             --cov=main \
             --cov=session_storage \
             --cov=signup_screen \
             --cov=supabase_client \
+            --cov=translations \
             --cov=ui_components \
             --cov-report=term-missing \
             --cov-fail-under=100
