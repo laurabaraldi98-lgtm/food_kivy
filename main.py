@@ -47,6 +47,7 @@ class FoodApp(App):
         self.food_lists = []
         self.current_list_id = None
         self.current_list_name = ""
+        self.selected_food = None
         self.result_message_key = None
         self.language = load_language(self.user_data_dir)
 
@@ -323,6 +324,7 @@ class FoodApp(App):
             "active_list",
             name=self.current_list_name,
         )
+        self.selected_food = None
         self.result_message_key = None
         self.result.text = ""
 
@@ -333,6 +335,7 @@ class FoodApp(App):
         self.active_list_label.text = translate(
             self.language, "no_active_list"
         )
+        self.selected_food = None
         self.result_message_key = None
         self.result.text = ""
 
@@ -418,6 +421,8 @@ class FoodApp(App):
         self.logout()
 
     def choose_food(self, instance):
+        self.selected_food = None
+
         if not self.current_list_id:
             self.result_message_key = "create_list_first"
             message = translate(self.language, self.result_message_key)
@@ -430,8 +435,10 @@ class FoodApp(App):
             self.result.text = f"[b]{message}[/b]"
             return
 
+        # Keep the dish separately from its formatted display text.
+        self.selected_food = random.choice(self.food)
         self.result_message_key = None
-        self.result.text = f"[b]{random.choice(self.food)}[/b]"
+        self.result.text = f"[b]{self.selected_food}[/b]"
 
 
 if __name__ == "__main__":  # pragma: no cover
