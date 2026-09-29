@@ -80,6 +80,9 @@ TEXTS = {
         "remove_member_failed": "Impossibile rimuovere il membro",
         "email_required": "Inserisci un indirizzo email",
         "add_member_failed": "Impossibile aggiungere il membro",
+        "load_lists_failed": "Impossibile caricare le liste",
+        "load_foods_failed": "Impossibile caricare i cibi",
+        "open_members_failed": "Impossibile aprire i membri della lista",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -162,6 +165,9 @@ TEXTS = {
         "remove_member_failed": "Could not remove the member",
         "email_required": "Enter an email address",
         "add_member_failed": "Could not add the member",
+        "load_lists_failed": "Could not load lists",
+        "load_foods_failed": "Could not load foods",
+        "open_members_failed": "Could not open list members",
     },
 }
 

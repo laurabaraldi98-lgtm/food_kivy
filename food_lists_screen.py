@@ -219,7 +219,9 @@ class FoodListsScreen(FoodListPopupsMixin, Screen):
             app.reload_food_lists()
             self.groups = get_groups(app.get_access_token())
         except RequestException:
-            self.status_label.text = "Impossibile caricare le liste"
+            self.status_label.text = translate(
+                self.language, "load_lists_failed"
+            )
             return
 
         self.status_label.text = ""
@@ -374,7 +376,9 @@ class FoodListsScreen(FoodListPopupsMixin, Screen):
         try:
             app.select_food_list(food_list)
         except RequestException:
-            self.status_label.text = "Impossibile caricare i cibi"
+            self.status_label.text = translate(
+                self.language, "load_foods_failed"
+            )
             return
 
         self.selected_list_id = food_list["id"]
@@ -422,7 +426,9 @@ class FoodListsScreen(FoodListPopupsMixin, Screen):
         group = self.get_group_for_list(food_list)
 
         if not group:
-            self.status_label.text = "Impossibile aprire i membri della lista"
+            self.status_label.text = translate(
+                self.language, "open_members_failed"
+            )
             return
 
         self.status_label.text = ""

@@ -346,3 +346,42 @@ def test_language_button_requests_change_from_app(screen):
 
     screen.menu.dismiss.assert_called_once_with()
     app.set_language.assert_called_once_with("en")
+
+
+def test_list_loading_error_is_translated_into_english(screen):
+    app = make_app()
+    app.reload_food_lists.side_effect = RequestException
+    screen.refresh_texts("en")
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.on_pre_enter()
+
+    assert screen.status_label.text == "Could not load lists"
+
+
+def test_food_loading_error_is_translated_into_english(screen):
+    food_list = {"id": 2, "name": "Cena"}
+    app = make_app(food_lists=[food_list])
+    app.select_food_list.side_effect = RequestException
+    screen.refresh_texts("en")
+
+    with patch("food_lists_screen.App.get_running_app", return_value=app):
+        screen.select_list(food_list)
+
+    assert screen.status_label.text == "Could not load foods"
+
+
+def test_missing_group_error_is_translated_into_english(screen):
+    screen.refresh_texts("en")
+
+    with (
+        patch.object(
+            screen,
+            "get_selected_list",
+            return_value={"id": 2, "name": "Famiglia", "group_id": 99},
+        ),
+        patch.object(screen, "get_group_for_list", return_value=None),
+    ):
+        screen.open_members_popup(None)
+
+    assert screen.status_label.text == "Could not open list members"
