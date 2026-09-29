@@ -187,6 +187,19 @@ class FoodListsScreen(FoodListPopupsMixin, Screen):
         self.add_widget(root)
 
     def refresh_texts(self, language):
+        previous_language = self.language
+        status_keys = (
+            "load_lists_failed",
+            "load_foods_failed",
+            "open_members_failed",
+            "leave_shared_unavailable",
+        )
+
+        for key in status_keys:
+            if self.status_label.text == translate(previous_language, key):
+                self.status_label.text = translate(language, key)
+                break
+
         self.language = language
         self.title_label.text = translate(language, "my_lists")
         self.home_button.text = translate(language, "back_home")

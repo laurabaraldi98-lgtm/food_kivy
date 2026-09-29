@@ -385,3 +385,13 @@ def test_missing_group_error_is_translated_into_english(screen):
         screen.open_members_popup(None)
 
     assert screen.status_label.text == "Could not open list members"
+
+
+def test_visible_error_changes_with_language(screen):
+    screen.status_label.text = "Impossibile caricare i cibi"
+
+    screen.refresh_texts("en")
+    assert screen.status_label.text == "Could not load foods"
+
+    screen.refresh_texts("it")
+    assert screen.status_label.text == "Impossibile caricare i cibi"
