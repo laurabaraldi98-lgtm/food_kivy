@@ -15,6 +15,7 @@ from requests import HTTPError, RequestException
 from auth_client import refresh_session, sign_out
 from auth_screen import AuthScreen
 from food_lists_screen import FoodListsScreen
+from language_settings import load_language, save_language
 from session_storage import (
     clear_refresh_token,
     load_refresh_token,
@@ -23,7 +24,6 @@ from session_storage import (
 from signup_screen import SignUpScreen
 from supabase_client import get_food_lists, get_foods
 from translations import translate
-from language_settings import load_language, save_language
 from ui_components import MenuButton, RoundedButton
 
 
@@ -54,10 +54,12 @@ class FoodApp(App):
         home_screen.add_widget(self.build_home())
 
         manager = ScreenManager()
+
         # Apply the saved language when the account screens are created.
         auth_screen = AuthScreen(name="auth")
         auth_screen.refresh_texts(self.language)
         manager.add_widget(auth_screen)
+
         signup_screen = SignUpScreen(name="signup")
         signup_screen.refresh_texts(self.language)
         manager.add_widget(signup_screen)
@@ -69,7 +71,6 @@ class FoodApp(App):
         manager.add_widget(lists_screen)
 
         manager.current = "auth"
-
         return manager
 
     def on_start(self):
@@ -179,6 +180,30 @@ class FoodApp(App):
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
+
+        self.language_flag = Image(
+            source=(
+                "images/flag_it.png"
+                if self.language == "en"
+                else "images/flag_en.png"
+            ),
+            fit_mode="contain",
+            size_hint=(None, None),
+            size=(dp(34), dp(34)),
+        )
+        self.language_button.add_widget(self.language_flag)
+
+        def position_language_flag(*args):
+            self.language_flag.pos = (
+                self.language_button.x + dp(12),
+                self.language_button.center_y - self.language_flag.height / 2,
+            )
+
+        self.language_button.bind(
+            pos=position_language_flag,
+            size=position_language_flag,
+        )
+        position_language_flag()
         self.language_button.bind(on_release=self.toggle_language)
 
         self.logout_button = RoundedButton(
@@ -212,8 +237,13 @@ class FoodApp(App):
         expires_in = session.get("expires_in")
         if isinstance(expires_in, (int, float)):
             # Refresh 60 seconds early, or after 90% for short sessions.
-            seconds_until_refresh = max(expires_in - 60, expires_in * 0.9)
-            self.token_refresh_at = time.monotonic() + seconds_until_refresh
+            seconds_until_refresh = max(
+                expires_in - 60,
+                expires_in * 0.9,
+            )
+            self.token_refresh_at = (
+                time.monotonic() + seconds_until_refresh
+            )
         else:
             self.token_refresh_at = None
 
@@ -341,6 +371,11 @@ class FoodApp(App):
         self.logout_button.text = translate(self.language, "logout")
         self.language_button.text = (
             "Italiano" if self.language == "en" else "English"
+        )
+        self.language_flag.source = (
+            "images/flag_it.png"
+            if self.language == "en"
+            else "images/flag_en.png"
         )
 
         if self.current_list_id is None:

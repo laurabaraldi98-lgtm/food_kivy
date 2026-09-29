@@ -1,11 +1,11 @@
-import pytest
 
 from unittest.mock import patch
+
+import pytest
 
 from language_settings import load_language
 from main import FoodApp
 from translations import TEXTS, translate
-
 from ui_components import RoundedButton
 
 
@@ -42,6 +42,7 @@ def test_language_button_changes_home_and_can_switch_back(app):
     assert app.lists_button.text == "Manage lists"
     assert app.logout_button.text == "Log out"
     assert app.language_button.text == "Italiano"
+    assert app.language_flag.source == "images/flag_it.png"
     assert app.active_list_label.text == "No active list"
     assert load_language(app.user_data_dir) == "en"
 
@@ -51,6 +52,7 @@ def test_language_button_changes_home_and_can_switch_back(app):
     assert app.title_label.text == "Cosa mangiamo?"
     assert app.choose_button.text == "Scegli per me"
     assert app.language_button.text == "English"
+    assert app.language_flag.source == "images/flag_en.png"
     assert load_language(app.user_data_dir) == "it"
 
 
@@ -63,14 +65,19 @@ def test_saved_language_is_loaded_when_app_restarts(app):
     assert restarted_app.language == "en"
     assert restarted_app.title_label.text == "What should we eat?"
     assert restarted_app.language_button.text == "Italiano"
+    assert restarted_app.language_flag.source == "images/flag_it.png"
 
     auth_screen = restarted_app.root.get_screen("auth")
     assert auth_screen.sign_in_button.text == "Sign in"
-    assert auth_screen.language_button.text == "Italiano"
+    assert auth_screen.language_button.background_normal == (
+        "images/flag_it.png"
+    )
 
     signup_screen = restarted_app.root.get_screen("signup")
     assert signup_screen.title_label.text == "Create account"
-    assert signup_screen.language_button.text == "Italiano"
+    assert signup_screen.language_button.background_normal == (
+        "images/flag_it.png"
+    )
 
 
 def test_active_list_name_is_not_translated(app):
@@ -134,3 +141,4 @@ def test_changing_language_updates_visible_list_actions(app):
     assert "Pranzo" in texts
     assert {"View foods", "Rename", "Delete"} <= texts
     assert lists_screen.title_label.text == "My lists"
+    assert lists_screen.language_flag.source == "images/flag_it.png"

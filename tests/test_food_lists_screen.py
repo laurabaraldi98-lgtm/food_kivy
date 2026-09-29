@@ -1,21 +1,11 @@
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import pytest
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
 from requests import RequestException
 
+from food_lists_test_helpers import find_widget, make_app, screen
 from ui_components import RoundedButton
-from food_lists_test_helpers import (
-    FakePopup,
-    fake_popup,
-    find_widget,
-    make_app,
-    popup_status,
-    screen,
-)
 
 
 def test_on_pre_enter_reloads_and_renders_lists(screen):
@@ -59,7 +49,6 @@ def test_render_lists_displays_empty_message(screen):
         Label,
         text="Non hai ancora nessuna lista",
     )
-
     assert message.text == "Non hai ancora nessuna lista"
 
 
@@ -93,7 +82,6 @@ def test_clicking_rendered_list_selects_it(screen):
 
     with patch("food_lists_screen.App.get_running_app", return_value=app):
         screen.render_lists()
-
         button = find_widget(
             screen.list_container,
             RoundedButton,
@@ -274,7 +262,9 @@ def test_open_members_popup_handles_missing_selection_or_group(screen):
         ):
             screen.open_members_popup(None)
 
-    assert screen.status_label.text == "Impossibile aprire i membri della lista"
+    assert screen.status_label.text == (
+        "Impossibile aprire i membri della lista"
+    )
 
 
 def test_open_members_popup(screen):
@@ -301,11 +291,13 @@ def test_refresh_texts_translates_list_screen_controls(screen):
     assert screen.shared_button.text == "+ Shared"
     assert screen.logout_button.text == "Log out"
     assert screen.language_button.text == "Italiano"
+    assert screen.language_flag.source == "images/flag_it.png"
 
     screen.refresh_texts("it")
 
     assert screen.title_label.text == "Le mie liste"
     assert screen.language_button.text == "English"
+    assert screen.language_flag.source == "images/flag_en.png"
 
 
 def test_render_lists_translates_actions_but_keeps_list_name(screen):

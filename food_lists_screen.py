@@ -79,6 +79,26 @@ class FoodListsScreen(FoodListPopupsMixin, Screen):
             my_color=(0.10, 0.55, 0.45, 1),
             color=(1, 1, 1, 1),
         )
+
+        self.language_flag = Image(
+            source="images/flag_en.png",
+            fit_mode="contain",
+            size_hint=(None, None),
+            size=(dp(34), dp(34)),
+        )
+        self.language_button.add_widget(self.language_flag)
+
+        def position_language_flag(*args):
+            self.language_flag.pos = (
+                self.language_button.x + dp(12),
+                self.language_button.center_y - self.language_flag.height / 2,
+            )
+
+        self.language_button.bind(
+            pos=position_language_flag,
+            size=position_language_flag,
+        )
+        position_language_flag()
         self.language_button.bind(on_release=self.toggle_language)
 
         self.logout_button = RoundedButton(
@@ -179,6 +199,11 @@ class FoodListsScreen(FoodListPopupsMixin, Screen):
         )
         self.language_button.text = (
             "Italiano" if language == "en" else "English"
+        )
+        self.language_flag.source = (
+            "images/flag_it.png"
+            if language == "en"
+            else "images/flag_en.png"
         )
 
     def toggle_language(self, instance):

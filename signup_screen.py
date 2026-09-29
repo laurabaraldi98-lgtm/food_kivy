@@ -2,6 +2,7 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
@@ -27,15 +28,16 @@ class SignUpScreen(Screen):
         )
         self.add_widget(background)
 
-        self.language_button = RoundedButton(
-            text="English",
-            font_size=sp(14),
+        self.language_button = Button(
+            text="",
+            background_normal="images/flag_en.png",
+            background_down="images/flag_en.png",
+            background_color=(1, 1, 1, 1),
+            border=(0, 0, 0, 0),
             size_hint=(None, None),
-            width=dp(105),
-            height=dp(40),
+            width=dp(48),
+            height=dp(48),
             pos_hint={"right": 0.97, "top": 0.98},
-            my_color=(0.10, 0.55, 0.45, 1),
-            color=(1, 1, 1, 1),
         )
         self.language_button.bind(on_release=self.toggle_language)
         self.add_widget(self.language_button)
@@ -125,8 +127,11 @@ class SignUpScreen(Screen):
 
     def refresh_texts(self, language):
         self.language = language
-        self.language_button.text = (
-            "Italiano" if language == "en" else "English"
+        self.language_button.background_normal = (
+            "images/flag_it.png" if language == "en" else "images/flag_en.png"
+        )
+        self.language_button.background_down = (
+            self.language_button.background_normal
         )
         self.title_label.text = translate(language, "create_account")
         self.create_account_button.text = translate(
