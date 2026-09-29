@@ -51,6 +51,10 @@ TEXTS = {
         "cancel": "Annulla",
         "confirm_deletion": "Conferma eliminazione",
         "delete_list_failed": "Impossibile eliminare la lista",
+        "leave_shared_confirm": "Abbandonare la lista '{name}'?\nNon potrai più vedere o modificare i suoi cibi.",
+        "leave_shared_title": "Abbandona lista condivisa",
+        "leave_shared_unavailable": "Impossibile abbandonare la lista condivisa",
+        "leave_list_failed": "Impossibile abbandonare la lista",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -104,6 +108,10 @@ TEXTS = {
         "cancel": "Cancel",
         "confirm_deletion": "Confirm deletion",
         "delete_list_failed": "Could not delete the list",
+        "leave_shared_confirm": "Leave the list '{name}'?\nYou will no longer be able to view or edit its foods.",
+        "leave_shared_title": "Leave shared list",
+        "leave_shared_unavailable": "Could not leave the shared list",
+        "leave_list_failed": "Could not leave the list",
     },
 }
 

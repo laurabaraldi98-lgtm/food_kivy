@@ -999,3 +999,65 @@ def test_delete_popup_shows_english_request_error(screen, fake_popup):
     assert find_widget(popup.content, Label).text == (
         "Could not delete the list"
     )
+
+
+def test_leave_popup_uses_english_and_wraps_message(screen, fake_popup):
+    selected = {"id": 1, "name": "Pranzo", "group_id": 9}
+    group = {"id": 9, "name": "Pranzo", "owner_id": "other-user"}
+    screen.refresh_texts("en")
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch.object(screen, "get_group_for_list", return_value=group),
+    ):
+        screen.open_leave_popup(None)
+
+    popup = fake_popup.last
+    message = find_widget(popup.content, Label)
+    message.width = 200
+
+    assert popup.title == "Leave shared list"
+    assert "Leave the list 'Pranzo'?" in message.text
+    assert message.text_size[0] == 200
+    find_widget(popup.content, RoundedButton, text="Cancel")
+    find_widget(popup.content, RoundedButton, text="Leave")
+
+
+def test_leave_popup_shows_english_request_error(screen, fake_popup):
+    selected = {"id": 1, "name": "Pranzo", "group_id": 9}
+    group = {"id": 9, "name": "Pranzo", "owner_id": "other-user"}
+    app = make_app(food_lists=[selected], current_list_id=1)
+    screen.refresh_texts("en")
+
+    with (
+        patch.object(screen, "get_selected_list", return_value=selected),
+        patch.object(screen, "get_group_for_list", return_value=group),
+        patch("food_lists_screen.App.get_running_app", return_value=app),
+        patch(
+            "food_lists_screen.remove_group_member",
+            side_effect=RequestException,
+        ),
+    ):
+        screen.open_leave_popup(None)
+        popup = fake_popup.last
+        find_widget(
+            popup.content, RoundedButton, text="Leave"
+        ).dispatch("on_release")
+
+    assert find_widget(popup.content, Label).text == (
+        "Could not leave the list"
+    )
+
+
+def test_delete_popup_wraps_message(screen, fake_popup):
+    selected = {"id": 1, "name": "Pranzo"}
+
+    with patch.object(
+        screen, "get_selected_list", return_value=selected
+    ):
+        screen.open_delete_popup(None)
+
+    message = find_widget(fake_popup.last.content, Label)
+    message.width = 200
+
+    assert message.text_size[0] == 200

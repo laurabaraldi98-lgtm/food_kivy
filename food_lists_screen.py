@@ -689,6 +689,13 @@ class FoodListsScreen(Screen):
             ),
             color=(0.08, 0.25, 0.20, 1),
         )
+        message.halign = "center"
+        message.valign = "middle"
+        message.bind(
+            width=lambda label, width: setattr(
+                label, "text_size", (width, None)
+            )
+        )
 
         buttons = BoxLayout(
             orientation="horizontal",
@@ -718,7 +725,7 @@ class FoodListsScreen(Screen):
             title_size=sp(21),
             content=layout,
             size_hint=(0.80, None),
-            height=dp(210),
+            height=dp(280),
             background="",
             background_color=POPUP_COLOR,
             title_color=TEXT_COLOR,
@@ -782,7 +789,9 @@ class FoodListsScreen(Screen):
         group = self.get_group_for_list(food_list)
 
         if not group:
-            self.status_label.text = "Impossibile abbandonare la lista condivisa"
+            self.status_label.text = translate(
+                self.language, "leave_shared_unavailable"
+            )
             return
 
         layout = BoxLayout(
@@ -793,11 +802,19 @@ class FoodListsScreen(Screen):
         add_colored_background(layout)
 
         message = Label(
-            text=(
-                f"Abbandonare la lista '{food_list['name']}'?\n"
-                "Non potrai più vedere o modificare i suoi cibi."
+            text=translate(
+                self.language,
+                "leave_shared_confirm",
+                name=food_list["name"],
             ),
             color=(0.08, 0.25, 0.20, 1),
+        )
+        message.halign = "center"
+        message.valign = "middle"
+        message.bind(
+            width=lambda label, width: setattr(
+                label, "text_size", (width, None)
+            )
         )
 
         buttons = BoxLayout(
@@ -808,12 +825,12 @@ class FoodListsScreen(Screen):
         )
 
         cancel_button = RoundedButton(
-            text="Annulla",
+            text=translate(self.language, "cancel"),
             my_color=(0.40, 0.40, 0.40, 1),
             color=(1, 1, 1, 1),
         )
         confirm_button = RoundedButton(
-            text="Abbandona",
+            text=translate(self.language, "leave"),
             my_color=(0.65, 0.18, 0.18, 1),
             color=(1, 1, 1, 1),
         )
@@ -824,11 +841,11 @@ class FoodListsScreen(Screen):
         layout.add_widget(buttons)
 
         popup = Popup(
-            title="Abbandona lista condivisa",
+            title=translate(self.language, "leave_shared_title"),
             title_size=sp(19),
             content=layout,
             size_hint=(0.80, None),
-            height=dp(210),
+            height=dp(280),
             background="",
             background_color=POPUP_COLOR,
             title_color=TEXT_COLOR,
@@ -845,7 +862,9 @@ class FoodListsScreen(Screen):
                     app.get_access_token(),
                 )
             except RequestException:
-                message.text = "Impossibile abbandonare la lista"
+                message.text = translate(
+                    self.language, "leave_list_failed"
+                )
                 return
 
             app.food_lists = [
