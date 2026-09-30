@@ -1,4 +1,4 @@
-name: Python tests
+name: Application tests
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
             'SUPABASE_KEY = "test-key"' \
             > config.py
 
-      - name: Run tests with coverage
+      - name: Run Python tests with coverage
         run: |
           xvfb-run -a python -m pytest \
             --cov=auth_client \
@@ -59,3 +59,35 @@ jobs:
             --cov=ui_components \
             --cov-report=term-missing \
             --cov-fail-under=100
+
+  recipe-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: supabase/functions/generate-recipe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.7"
+
+      - name: Check formatting
+        run: deno fmt --check index.ts index_test.ts
+
+      - name: Check TypeScript types
+        run: deno check index.ts index_test.ts
+
+      - name: Lint recipe function and tests
+        run: deno lint index.ts index_test.ts
+
+      - name: Run recipe tests with coverage
+        run: deno test --allow-env --coverage=coverage index_test.ts
+
+      - name: Require full recipe coverage
+        run: deno coverage coverage --include='generate-recipe/index\.ts$' --threshold=100
