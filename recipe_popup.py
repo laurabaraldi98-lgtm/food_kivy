@@ -20,19 +20,27 @@ class RecipePopup(Popup):
         self.dish = dish
         self.language = language
         self.is_generating = False
+        self.has_recipe = False
         self._closed = False
 
-        layout = BoxLayout(
+        self.layout = BoxLayout(
             orientation="vertical",
             spacing=dp(12),
             padding=dp(12),
+        )
+
+        self.controls = BoxLayout(
+            orientation="vertical",
+            spacing=dp(8),
+            size_hint_y=None,
+            height=dp(156),
         )
 
         self.dish_label = Label(
             text=dish,
             font_size=sp(20),
             size_hint_y=None,
-            height=dp(60),
+            height=dp(44),
             halign="center",
             valign="middle",
             color=(0.02, 0.35, 0.28, 1),
@@ -40,7 +48,7 @@ class RecipePopup(Popup):
         self.dish_label.bind(
             size=lambda instance, value: setattr(instance, "text_size", value)
         )
-        layout.add_widget(self.dish_label)
+        self.controls.add_widget(self.dish_label)
 
         servings_row = BoxLayout(
             spacing=dp(12),
@@ -64,7 +72,7 @@ class RecipePopup(Popup):
 
         servings_row.add_widget(self.servings_label)
         servings_row.add_widget(self.servings_spinner)
-        layout.add_widget(servings_row)
+        self.controls.add_widget(servings_row)
 
         self.status_label = Label(
             text="",
@@ -78,11 +86,10 @@ class RecipePopup(Popup):
         self.status_label.bind(
             size=lambda instance, value: setattr(instance, "text_size", value)
         )
-        layout.add_widget(self.status_label)
+        self.controls.add_widget(self.status_label)
+        self.layout.add_widget(self.controls)
 
-        self.recipe_scroll = ScrollView(
-            do_scroll_x=False,
-        )
+        self.recipe_scroll = ScrollView(do_scroll_x=False)
 
         # Wrap long recipes and let the ScrollView handle their full height.
         self.recipe_label = Label(
@@ -104,7 +111,7 @@ class RecipePopup(Popup):
         )
 
         self.recipe_scroll.add_widget(self.recipe_label)
-        layout.add_widget(self.recipe_scroll)
+        self.layout.add_widget(self.recipe_scroll)
 
         actions = BoxLayout(
             spacing=dp(10),
@@ -128,12 +135,12 @@ class RecipePopup(Popup):
 
         actions.add_widget(self.cancel_button)
         actions.add_widget(self.generate_button)
-        layout.add_widget(actions)
+        self.layout.add_widget(actions)
 
         super().__init__(
             title=translate(language, "generate_recipe"),
             title_size=sp(19),
-            content=layout,
+            content=self.layout,
             size_hint=(0.92, 0.90),
             background="",
             background_color=(0.70, 0.92, 0.88, 1),
@@ -158,8 +165,33 @@ class RecipePopup(Popup):
             else (0.02, 0.35, 0.28, 1)
         )
 
+    def show_recipe(self, text):
+        self.has_recipe = True
+        self.recipe_label.text = text
+        self.recipe_scroll.scroll_y = 1
+
+        # Remove the controls so the recipe receives their space.
+        self.layout.remove_widget(self.controls)
+        self.title = translate(self.language, "recipe_generated")
+        self.generate_button.text = translate(self.language, "new_recipe")
+
+    def show_recipe_options(self):
+        self.has_recipe = False
+        self.recipe_label.text = ""
+        self.status_label.text = ""
+        self.recipe_scroll.scroll_y = 1
+        self.title = translate(self.language, "generate_recipe")
+        self.generate_button.text = translate(self.language, "generate")
+
+        # Kivy stores children in reverse order; index 2 places controls at the top.
+        self.layout.add_widget(self.controls, index=2)
+
     def handle_generate(self, instance):
         if self.is_generating or self._closed:
+            return
+
+        if self.has_recipe:
+            self.show_recipe_options()
             return
 
         # Session renewal may update the app, so obtain the token on the UI thread.
@@ -196,9 +228,8 @@ class RecipePopup(Popup):
         response = error.response
 
         if response is not None:
-            if response.status_code in (400, 401, 403):
-                if response.status_code in (401, 403):
-                    return "recipe_auth_required"
+            if response.status_code in (401, 403):
+                return "recipe_auth_required"
             if response.status_code == 429:
                 return "recipe_rate_limited"
 
@@ -274,6 +305,5 @@ class RecipePopup(Popup):
             self.set_status(error_key, error=True)
             return
 
-        self.recipe_label.text = text
-        self.recipe_scroll.scroll_y = 1
         self.set_status("recipe_generated")
+        self.show_recipe(text)

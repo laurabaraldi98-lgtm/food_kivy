@@ -98,6 +98,7 @@ TEXTS = {
         "recipe_auth_required": "Sessione non valida. Accedi nuovamente.",
         "recipe_rate_limited": "Troppe richieste. Attendi prima di riprovare.",
         "recipe_time": "Preparazione e cottura: {minutes} minuti",
+        "new_recipe": "Nuova ricetta",
     },
     "en": {
         "home_title": "What should we eat?",
@@ -198,6 +199,7 @@ TEXTS = {
         "recipe_auth_required": "Invalid session. Please sign in again.",
         "recipe_rate_limited": "Too many requests. Please wait before trying again.",
         "recipe_time": "Preparation and cooking: {minutes} minutes",
+        "new_recipe": "New recipe",
     },
 }
 

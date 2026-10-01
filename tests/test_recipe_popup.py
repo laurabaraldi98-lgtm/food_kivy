@@ -53,7 +53,9 @@ def test_recipe_popup_uses_selected_language_and_preserves_dish(
     assert popup.cancel_button.text == close
     assert not popup.generate_button.disabled
     assert not popup.is_generating
+    assert not popup.has_recipe
     assert not popup._closed
+    assert popup.controls.parent is popup.layout
 
 
 def test_recipe_popup_wraps_text_and_adjusts_recipe_height(popup):
@@ -179,6 +181,7 @@ def test_generate_handles_session_errors_without_starting_worker(
     assert not popup.is_generating
     assert not popup.generate_button.disabled
     assert not popup.servings_spinner.disabled
+    assert popup.controls.parent is popup.layout
     assert popup.status_label.text == translate("it", key)
     assert tuple(popup.status_label.color) == (0.55, 0.20, 0.20, 1)
 
@@ -231,7 +234,7 @@ def test_successful_request_schedules_result_on_ui_thread(popup):
         schedule.assert_called_once()
         finish.assert_not_called()
 
-        # Execute the queued UI callback explicitly, without running Kivy's loop.
+        # Execute the queued UI callback without running Kivy's event loop.
         callback, delay = schedule.call_args.args
         assert delay == 0
         callback(0)
@@ -291,7 +294,7 @@ def test_malformed_recipe_is_reported_as_failure(popup, recipe):
         finish.assert_called_once_with("", "recipe_failed")
 
 
-def test_finish_generation_displays_recipe_and_restores_controls(popup):
+def test_finish_generation_displays_recipe_and_hides_options(popup):
     popup.is_generating = True
     popup.generate_button.disabled = True
     popup.servings_spinner.disabled = True
@@ -301,11 +304,15 @@ def test_finish_generation_displays_recipe_and_restores_controls(popup):
     popup.finish_generation("Generated recipe", None)
 
     assert not popup.is_generating
+    assert popup.has_recipe
     assert not popup.generate_button.disabled
     assert not popup.servings_spinner.disabled
     assert popup.recipe_label.text == "Generated recipe"
     assert popup.recipe_scroll.scroll_y == 1
-    assert popup.status_label.text == translate("it", "recipe_generated")
+    assert popup.controls.parent is None
+    assert popup.controls not in popup.layout.children
+    assert popup.title == translate("it", "recipe_generated")
+    assert popup.generate_button.text == translate("it", "new_recipe")
     assert tuple(popup.status_label.color) == (0.02, 0.35, 0.28, 1)
 
 
@@ -317,8 +324,10 @@ def test_finish_generation_displays_error_and_restores_controls(popup):
     popup.finish_generation("", "recipe_timeout")
 
     assert not popup.is_generating
+    assert not popup.has_recipe
     assert not popup.generate_button.disabled
     assert not popup.servings_spinner.disabled
+    assert popup.controls.parent is popup.layout
     assert popup.recipe_label.text == ""
     assert popup.status_label.text == translate("it", "recipe_timeout")
     assert tuple(popup.status_label.color) == (0.55, 0.20, 0.20, 1)
@@ -338,7 +347,57 @@ def test_finish_generation_ignores_results_after_popup_is_closed(
     popup.finish_generation("Late recipe", error_key)
 
     assert not popup.is_generating
+    assert not popup.has_recipe
     assert popup.recipe_label.text == "Existing text"
     assert popup.status_label.text == "Existing status"
     assert popup.generate_button.disabled
     assert popup.servings_spinner.disabled
+
+
+@pytest.mark.parametrize("language", ["it", "en"])
+def test_new_recipe_restores_options_without_sending_request(language):
+    popup = RecipePopup("Pizza", language)
+    popup.servings_spinner.text = "4"
+    popup.finish_generation("Generated recipe", None)
+
+    with (
+        patch("recipe_popup.App.get_running_app") as get_app,
+        patch("recipe_popup.Thread") as thread,
+        patch("recipe_popup.generate_recipe") as generate,
+    ):
+        popup.generate_button.dispatch("on_release")
+
+    get_app.assert_not_called()
+    thread.assert_not_called()
+    generate.assert_not_called()
+
+    assert not popup.has_recipe
+    assert not popup.is_generating
+    assert popup.controls.parent is popup.layout
+    assert popup.layout.children[-1] is popup.controls
+    assert popup.recipe_label.text == ""
+    assert popup.status_label.text == ""
+    assert popup.servings_spinner.text == "4"
+    assert popup.title == translate(language, "generate_recipe")
+    assert popup.generate_button.text == translate(language, "generate")
+    assert not popup.generate_button.disabled
+    assert not popup.servings_spinner.disabled
+
+    # Starting another recipe uses the newly selected number of servings.
+    popup.servings_spinner.text = "3"
+    app = Mock()
+    app.get_access_token.return_value = "test-token"
+
+    with (
+        patch("recipe_popup.App.get_running_app", return_value=app),
+        patch("recipe_popup.Thread") as thread,
+    ):
+        popup.generate_button.dispatch("on_release")
+
+    thread.assert_called_once_with(
+        target=popup.request_recipe,
+        args=(3, "test-token"),
+        daemon=True,
+    )
+    thread.return_value.start.assert_called_once_with()
+    assert popup.is_generating
