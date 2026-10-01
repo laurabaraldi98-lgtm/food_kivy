@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { handleRecipeRequest } from "./index.ts";
+import { handleRecipeRequest as recipeHandler } from "./index.ts";
+
+type QuotaClient = Parameters<typeof recipeHandler>[1];
 
 const VALID_INPUT = {
   dish: "Pizza",
@@ -20,6 +22,31 @@ const VALID_RECIPE = {
     "Lascia lievitare, stendi e cuoci.",
   ],
 };
+
+// This fake exists only in tests and never connects to Supabase.
+function makeQuotaClient(
+  data: unknown = { allowed: true, retry_after: 0 },
+  error: unknown = null,
+) {
+  const calls: string[] = [];
+
+  const client: QuotaClient = {
+    rpc(name: string) {
+      calls.push(name);
+      return Promise.resolve({ data, error });
+    },
+  };
+
+  return { client, calls };
+}
+
+// Existing recipe tests use an allowed quota unless they specify another client.
+function handleRecipeRequest(
+  request: Request,
+  client: QuotaClient = makeQuotaClient().client,
+): Promise<Response> {
+  return recipeHandler(request, client);
+}
 
 function makeRequest(payload: unknown): Request {
   return new Request("https://example.test/generate-recipe", {
@@ -84,20 +111,24 @@ async function assertError(
   request: Request,
   status: number,
   code: string,
+  client: QuotaClient = makeQuotaClient().client,
 ): Promise<void> {
-  const response = await handleRecipeRequest(request);
+  const response = await handleRecipeRequest(request, client);
 
   assert.equal(response.status, status);
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
   assert.deepEqual(await response.json(), { error: code });
 }
 
-Deno.test("returns a validated recipe and sends the expected Gemini request", async () => {
+Deno.test("returns a validated recipe and checks quota before calling Gemini", async () => {
   let calls = 0;
+  const quota = makeQuotaClient();
 
   await withFakeGemini(
     (url, options) => {
       calls += 1;
 
+      assert.deepEqual(quota.calls, ["consume_recipe_quota"]);
       assert.equal(
         String(url),
         "https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent",
@@ -126,7 +157,10 @@ Deno.test("returns a validated recipe and sends the expected Gemini request", as
       return Promise.resolve(geminiResponse(VALID_RECIPE));
     },
     async () => {
-      const response = await handleRecipeRequest(makeRequest(VALID_INPUT));
+      const response = await handleRecipeRequest(
+        makeRequest(VALID_INPUT),
+        quota.client,
+      );
 
       assert.equal(response.status, 200);
       assert.equal(response.headers.get("Cache-Control"), "no-store");
@@ -135,18 +169,26 @@ Deno.test("returns a validated recipe and sends the expected Gemini request", as
   );
 
   assert.equal(calls, 1);
+  assert.deepEqual(quota.calls, ["consume_recipe_quota"]);
 });
 
-Deno.test("rejects methods other than POST", async () => {
+Deno.test("rejects methods other than POST without consuming quota", async () => {
+  const quota = makeQuotaClient();
+
   const response = await handleRecipeRequest(
     new Request("https://example.test/generate-recipe"),
+    quota.client,
   );
 
   assert.equal(response.status, 405);
   assert.equal(response.headers.get("Allow"), "POST");
+  assert.deepEqual(await response.json(), { error: "method_not_allowed" });
+  assert.deepEqual(quota.calls, []);
 });
 
-Deno.test("rejects malformed JSON", async () => {
+Deno.test("rejects malformed JSON without consuming quota", async () => {
+  const quota = makeQuotaClient();
+
   await assertError(
     new Request("https://example.test/generate-recipe", {
       method: "POST",
@@ -154,10 +196,15 @@ Deno.test("rejects malformed JSON", async () => {
     }),
     400,
     "invalid_json",
+    quota.client,
   );
+
+  assert.deepEqual(quota.calls, []);
 });
 
-Deno.test("rejects oversized request bodies", async () => {
+Deno.test("rejects oversized request bodies without consuming quota", async () => {
+  const quota = makeQuotaClient();
+
   await assertError(
     new Request("https://example.test/generate-recipe", {
       method: "POST",
@@ -165,7 +212,10 @@ Deno.test("rejects oversized request bodies", async () => {
     }),
     413,
     "request_too_large",
+    quota.client,
   );
+
+  assert.deepEqual(quota.calls, []);
 });
 
 const invalidInputs = [
@@ -183,7 +233,9 @@ const invalidInputs = [
 ];
 
 for (const [index, input] of invalidInputs.entries()) {
-  Deno.test(`rejects invalid recipe input ${index + 1} without calling Gemini`, async () => {
+  Deno.test(`rejects invalid recipe input ${index + 1} without consuming quota or calling Gemini`, async () => {
+    const quota = makeQuotaClient();
+
     await withFakeGemini(
       () => {
         throw new Error("Gemini must not be called for invalid input");
@@ -193,13 +245,18 @@ for (const [index, input] of invalidInputs.entries()) {
           makeRequest(input),
           400,
           "invalid_recipe_request",
+          quota.client,
         );
       },
     );
+
+    assert.deepEqual(quota.calls, []);
   });
 }
 
-Deno.test("reports a missing API key without calling Gemini", async () => {
+Deno.test("reports a missing API key without consuming quota or calling Gemini", async () => {
+  const quota = makeQuotaClient();
+
   await withFakeGemini(
     () => {
       throw new Error("Gemini must not be called without an API key");
@@ -209,10 +266,13 @@ Deno.test("reports a missing API key without calling Gemini", async () => {
         makeRequest(VALID_INPUT),
         503,
         "recipe_service_not_configured",
+        quota.client,
       );
     },
     null,
   );
+
+  assert.deepEqual(quota.calls, []);
 });
 
 for (
@@ -221,16 +281,25 @@ for (
     [500, 502, "recipe_generation_failed"],
   ] as const
 ) {
-  Deno.test(`handles Gemini HTTP ${providerStatus}`, async () => {
+  Deno.test(`handles Gemini HTTP ${providerStatus} after consuming quota once`, async () => {
+    const quota = makeQuotaClient();
+
     await withFakeGemini(
       () =>
         Promise.resolve(
           new Response("provider error", { status: providerStatus }),
         ),
       async () => {
-        await assertError(makeRequest(VALID_INPUT), expectedStatus, code);
+        await assertError(
+          makeRequest(VALID_INPUT),
+          expectedStatus,
+          code,
+          quota.client,
+        );
       },
     );
+
+    assert.deepEqual(quota.calls, ["consume_recipe_quota"]);
   });
 }
 
@@ -373,3 +442,132 @@ Deno.test("uses the default model when GEMINI_MODEL is not configured", async ()
     },
   );
 });
+
+for (const retryAfter of [30, 86400]) {
+  Deno.test(`rejects exhausted quota with Retry-After ${retryAfter} without calling Gemini`, async () => {
+    const quota = makeQuotaClient({
+      allowed: false,
+      retry_after: retryAfter,
+    });
+    let geminiCalls = 0;
+
+    await withFakeGemini(
+      () => {
+        geminiCalls += 1;
+        return Promise.resolve(geminiResponse(VALID_RECIPE));
+      },
+      async () => {
+        const response = await handleRecipeRequest(
+          makeRequest(VALID_INPUT),
+          quota.client,
+        );
+
+        assert.equal(response.status, 429);
+        assert.equal(response.headers.get("Retry-After"), String(retryAfter));
+        assert.equal(response.headers.get("Cache-Control"), "no-store");
+        assert.deepEqual(await response.json(), {
+          error: "recipe_rate_limited",
+          retry_after: retryAfter,
+        });
+      },
+    );
+
+    assert.equal(geminiCalls, 0);
+    assert.deepEqual(quota.calls, ["consume_recipe_quota"]);
+  });
+}
+
+Deno.test("does not call Gemini when the quota RPC returns an error", async () => {
+  const quota = makeQuotaClient(
+    { allowed: true, retry_after: 0 },
+    { message: "Database unavailable" },
+  );
+  let geminiCalls = 0;
+
+  await withFakeGemini(
+    () => {
+      geminiCalls += 1;
+      return Promise.resolve(geminiResponse(VALID_RECIPE));
+    },
+    async () => {
+      await assertError(
+        makeRequest(VALID_INPUT),
+        503,
+        "recipe_quota_unavailable",
+        quota.client,
+      );
+    },
+  );
+
+  assert.equal(geminiCalls, 0);
+  assert.deepEqual(quota.calls, ["consume_recipe_quota"]);
+});
+
+Deno.test("does not call Gemini when the quota RPC rejects", async () => {
+  let quotaCalls = 0;
+  let geminiCalls = 0;
+
+  const client: QuotaClient = {
+    rpc(name: string) {
+      assert.equal(name, "consume_recipe_quota");
+      quotaCalls += 1;
+      return Promise.reject(new TypeError("Database network failure"));
+    },
+  };
+
+  await withFakeGemini(
+    () => {
+      geminiCalls += 1;
+      return Promise.resolve(geminiResponse(VALID_RECIPE));
+    },
+    async () => {
+      await assertError(
+        makeRequest(VALID_INPUT),
+        503,
+        "recipe_quota_unavailable",
+        client,
+      );
+    },
+  );
+
+  assert.equal(quotaCalls, 1);
+  assert.equal(geminiCalls, 0);
+});
+
+const invalidQuotaResponses = [
+  null,
+  [],
+  {},
+  { allowed: "true", retry_after: 0 },
+  { allowed: true, retry_after: "0" },
+  { allowed: true, retry_after: 0.5 },
+  { allowed: true, retry_after: -1 },
+  { allowed: false, retry_after: 86401 },
+  { allowed: true, retry_after: 1 },
+  { allowed: false, retry_after: 0 },
+];
+
+for (const [index, data] of invalidQuotaResponses.entries()) {
+  Deno.test(`rejects malformed quota response ${index + 1} without calling Gemini`, async () => {
+    const quota = makeQuotaClient(data);
+    let geminiCalls = 0;
+
+    await withFakeGemini(
+      () => {
+        geminiCalls += 1;
+        return Promise.resolve(geminiResponse(VALID_RECIPE));
+      },
+      async () => {
+        await assertError(
+          makeRequest(VALID_INPUT),
+          503,
+          "recipe_quota_unavailable",
+          quota.client,
+        );
+      },
+    );
+
+    assert.equal(geminiCalls, 0);
+    assert.deepEqual(quota.calls, ["consume_recipe_quota"]);
+  });
+}

@@ -18,6 +18,14 @@ type Recipe = {
   steps: string[];
 };
 
+// Tests provide a fake client; production uses the authenticated user's client.
+type QuotaClient = {
+  rpc(name: string): PromiseLike<{
+    data: unknown;
+    error: unknown;
+  }>;
+};
+
 const RECIPE_SCHEMA = {
   type: "object",
   properties: {
@@ -177,7 +185,63 @@ function errorResponse(code: string, status: number): Response {
   );
 }
 
-export async function handleRecipeRequest(req: Request): Promise<Response> {
+// The database owns the counters and consumes quota atomically.
+async function checkRecipeQuota(
+  client: QuotaClient,
+): Promise<Response | null> {
+  try {
+    const { data, error } = await client.rpc("consume_recipe_quota");
+
+    if (error) {
+      return errorResponse("recipe_quota_unavailable", 503);
+    }
+
+    if (
+      !isObject(data) ||
+      typeof data.allowed !== "boolean" ||
+      typeof data.retry_after !== "number" ||
+      !Number.isInteger(data.retry_after) ||
+      data.retry_after < 0 ||
+      data.retry_after > 86400
+    ) {
+      return errorResponse("recipe_quota_unavailable", 503);
+    }
+
+    if (data.allowed) {
+      if (data.retry_after !== 0) {
+        return errorResponse("recipe_quota_unavailable", 503);
+      }
+
+      return null;
+    }
+
+    if (data.retry_after < 1) {
+      return errorResponse("recipe_quota_unavailable", 503);
+    }
+
+    return Response.json(
+      {
+        error: "recipe_rate_limited",
+        retry_after: data.retry_after,
+      },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(data.retry_after),
+        },
+      },
+    );
+  } catch {
+    // Never call Gemini when the quota check cannot be completed.
+    return errorResponse("recipe_quota_unavailable", 503);
+  }
+}
+
+export async function handleRecipeRequest(
+  req: Request,
+  quotaClient: QuotaClient,
+): Promise<Response> {
   if (req.method !== "POST") {
     return Response.json(
       { error: "method_not_allowed" },
@@ -215,6 +279,13 @@ export async function handleRecipeRequest(req: Request): Promise<Response> {
 
   if (!apiKey) {
     return errorResponse("recipe_service_not_configured", 503);
+  }
+
+  // Invalid requests do not consume quota; accepted attempts do.
+  const quotaError = await checkRecipeQuota(quotaClient);
+
+  if (quotaError !== null) {
+    return quotaError;
   }
 
   // The model can be changed through Supabase secrets without editing this file.
@@ -298,7 +369,10 @@ export async function handleRecipeRequest(req: Request): Promise<Response> {
   }
 }
 
-// Require a valid user session before running the recipe handler.
+// Use the caller's session so SQL identifies the user through auth.uid().
 export default {
-  fetch: withSupabase({ auth: "user" }, handleRecipeRequest),
+  fetch: withSupabase(
+    { auth: "user" },
+    (req, ctx) => handleRecipeRequest(req, ctx.supabase),
+  ),
 };
