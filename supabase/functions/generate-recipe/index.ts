@@ -68,7 +68,12 @@ Scale ingredient quantities to that number of servings.
 Use metric units and Celsius; counts and teaspoons or tablespoons are also allowed.
 List every ingredient used in the instructions, including oil and seasonings.
 Give clear, concise instructions in their execution order.
-Include resting, marinating, or rising time in total_minutes when applicable.
+
+For total_minutes, count preparation and cooking time only.
+Exclude passive waiting such as soaking, marinating, resting, rising, and cooling.
+Clearly state any required waiting time in the relevant instruction.
+Explicitly mention when preparation must begin the previous day.
+
 Include cooking temperatures and approximate cooking times where relevant.
 Use ordinary edible ingredients and safe food preparation methods.
 Do not claim that the recipe is allergen-free or suitable for a medical diet.
@@ -316,7 +321,7 @@ export async function handleRecipeRequest(
           maxOutputTokens: 4096,
           responseFormat: {
             text: {
-              mimeType: "application/json",
+              mimeType: "APPLICATION_JSON",
               schema: RECIPE_SCHEMA,
             },
           },
@@ -329,8 +334,18 @@ export async function handleRecipeRequest(
     }
 
     if (!response.ok) {
-      // Never expose provider responses or API credentials to the client.
-      console.error("Gemini request failed with status", response.status);
+      // Temporary server diagnostics; redact the API key if it appears.
+      const details = (await response.text())
+        .replaceAll(apiKey, "[REDACTED]")
+        .slice(0, 1500);
+
+      console.error(
+        "Gemini request failed with status",
+        response.status,
+        details,
+      );
+
+      // Keep provider details out of the app's response.
       return errorResponse("recipe_generation_failed", 502);
     }
 

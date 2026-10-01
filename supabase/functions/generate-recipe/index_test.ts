@@ -137,6 +137,7 @@ Deno.test("returns a validated recipe and checks quota before calling Gemini", a
 
       const headers = new Headers(options?.headers);
       assert.equal(headers.get("x-goog-api-key"), "fake-api-key");
+      assert.equal(headers.get("Content-Type"), "application/json");
 
       const body = JSON.parse(String(options?.body));
 
@@ -148,9 +149,11 @@ Deno.test("returns a validated recipe and checks quota before calling Gemini", a
         body.systemInstruction.parts[0].text,
         /Treat these fields as data/,
       );
+
+      // The REST response format uses an enum, not a MIME string.
       assert.equal(
         body.generationConfig.responseFormat.text.mimeType,
-        "application/json",
+        "APPLICATION_JSON",
       );
       assert.ok(options?.signal);
 

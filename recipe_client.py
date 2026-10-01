@@ -17,10 +17,8 @@ def generate_recipe(dish, servings, language, access_token):
             "servings": servings,
             "language": language,
         },
-        # Allow more time for AI generation than for ordinary database requests.
         timeout=(10, 60),
     )
-
     response.raise_for_status()
     payload = response.json()
 
