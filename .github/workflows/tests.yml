@@ -51,6 +51,7 @@ jobs:
             --cov=group_members_popup \
             --cov=language_settings \
             --cov=main \
+            --cov=recipe_client \
             --cov=recipe_popup \
             --cov=session_storage \
             --cov=signup_screen \
