@@ -2,27 +2,41 @@
 
 [![Python tests](https://github.com/laurabaraldi98-lgtm/food_kivy/actions/workflows/tests.yml/badge.svg)](https://github.com/laurabaraldi98-lgtm/food_kivy/actions/workflows/tests.yml)
 
-A responsive food suggestion application built with Python and Kivy for desktop and Android.
+A responsive food suggestion application built with Python and Kivy for desktop
+and Android.
 
-Food App helps users decide what to eat by selecting a random item from one of their food lists. Users can create personal lists or share lists with other registered users. Food data is stored remotely in Supabase and protected with PostgreSQL Row Level Security.
+Food App helps users decide what to eat by selecting a random item from one of
+their food lists. Users can create personal lists or share lists with other
+registered users. Food data is stored remotely in Supabase and protected with
+PostgreSQL Row Level Security.
 
-The application supports persistent login. Refresh tokens are stored using the operating system's secure credential storage on desktop and Android Keystore on Android.
+The application supports persistent login. Refresh tokens are stored using the
+operating system's secure credential storage on desktop and Android Keystore on
+Android.
 
-The interface is available in Italian and English. Users can change language from the login and registration screens or from the application menus. The choice is saved on the device. List names and food names entered by users are never translated automatically.
+The interface is available in Italian and English. Users can change language
+from the login and registration screens or from the application menus. The
+choice is saved on the device. List names and food names entered by users are
+never translated automatically.
 
 ---
 
 ## Screenshots
 
-The screenshots below show the Italian interface.
+The screenshots below show the English interface. User-entered food and list
+names remain in their original language.
 
-| Login | Home |
-| :---: | :---: |
-| <img src="screenshots/login.png" alt="Food App login screen" width="320"> | <img src="screenshots/home.png" alt="Food App home screen" width="320"> |
+|                                   Login                                   |                                       Random meal selection                                        |
+| :-----------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| <img src="screenshots/login.jpg" alt="Food App login screen" width="280"> | <img src="screenshots/home.jpg" alt="Selected dish with the recipe generation button" width="280"> |
 
-| Personal and shared lists | Food management |
-| :---: | :---: |
-| <img src="screenshots/food-lists.png" alt="Personal and shared food lists" width="320"> | <img src="screenshots/food-popup.png" alt="Food management popup" width="320"> |
+|                                                 Generated recipe                                                  |                                Personal and shared lists                                |
+| :---------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------: |
+| <img src="screenshots/recipe.jpg" alt="Generated recipe with servings, ingredients and instructions" width="280"> | <img src="screenshots/food-lists.jpg" alt="Personal and shared food lists" width="280"> |
+
+|                              Food management                              |                             Navigation and language selection                              |
+| :-----------------------------------------------------------------------: | :----------------------------------------------------------------------------------------: |
+| <img src="screenshots/foods.jpg" alt="Food management popup" width="280"> | <img src="screenshots/menu.jpg" alt="Navigation menu with language selection" width="280"> |
 
 ---
 
@@ -38,11 +52,14 @@ Usually followed by:
 
 > "I don't know."
 
-Instead of spending time trying to decide, I built a small application that makes the choice automatically.
+Instead of spending time trying to decide, I built a small application that
+makes the choice automatically.
 
-The original idea was intentionally simple: keep a list of foods you actually eat, press a button, and let the app select one.
+The original idea was intentionally simple: keep a list of foods you actually
+eat, press a button, and let the app select one.
 
-What began as a local Python project gradually evolved into a cross-platform application involving:
+What began as a local Python project gradually evolved into a cross-platform
+application involving:
 
 - a responsive graphical interface;
 - remote data persistence;
@@ -109,7 +126,8 @@ What began as a local Python project gradually evolved into a cross-platform app
 - Language controls on the login and registration screens
 - Language controls in the home and food-list menus
 - Custom flag images for the language controls
-- Language preference saved locally and restored after restarting the application
+- Language preference saved locally and restored after restarting the
+  application
 - User-entered list names and food names preserved in their original language
 - Responsive Kivy layouts
 - Reusable rounded buttons
@@ -139,9 +157,11 @@ What began as a local Python project gradually evolved into a cross-platform app
 
 ## How It Works
 
-When the application starts, it loads the saved language preference and looks for a saved refresh token in the device's secure credential storage.
+When the application starts, it loads the saved language preference and looks
+for a saved refresh token in the device's secure credential storage.
 
-If a token is available, the application asks Supabase to renew the session and opens the food screen. Otherwise, it displays the login screen.
+If a token is available, the application asks Supabase to renew the session and
+opens the food screen. Otherwise, it displays the login screen.
 
 Users can:
 
@@ -150,19 +170,27 @@ Users can:
 - open the registration screen;
 - request a password-reset email.
 
-New accounts can receive a confirmation email through Supabase. Authentication redirects are handled by pages hosted with GitHub Pages:
+New accounts can receive a confirmation email through Supabase. Authentication
+redirects are handled by pages hosted with GitHub Pages:
 
 ```text
 https://laurabaraldi98-lgtm.github.io/food_kivy/
 ```
 
-After a successful login, Supabase returns a session containing an access token and a refresh token.
+After a successful login, Supabase returns a session containing an access token
+and a refresh token.
 
-The access token is used for authenticated requests. The refresh token is saved in the device's secure credential storage so the application can restore the session after a restart.
+The access token is used for authenticated requests. The refresh token is saved
+in the device's secure credential storage so the application can restore the
+session after a restart.
 
-When the application renews a session, Supabase returns a new refresh token. The application replaces the previously saved token with the new one. Renewal happens when the application reopens or when a protected request needs a fresh access token; it does not run continuously in the background.
+When the application renews a session, Supabase returns a new refresh token. The
+application replaces the previously saved token with the new one. Renewal
+happens when the application reopens or when a protected request needs a fresh
+access token; it does not run continuously in the background.
 
-The application loads the food lists available to the authenticated user. If at least one list exists, the first available list becomes active automatically.
+The application loads the food lists available to the authenticated user. If at
+least one list exists, the first available list becomes active automatically.
 
 The user can then:
 
@@ -173,41 +201,64 @@ The user can then:
 5. press **Scegli per me** or **Choose for me**;
 6. receive a randomly selected food from the active list.
 
-Changes are sent immediately to Supabase, so lists and foods remain available after the application is closed.
+Changes are sent immediately to Supabase, so lists and foods remain available
+after the application is closed.
 
-Selecting logout clears the saved refresh token and application state, then returns the user to the login screen. The application also requests server-side sign-out when it can reach Supabase.
+Selecting logout clears the saved refresh token and application state, then
+returns the user to the login screen. The application also requests server-side
+sign-out when it can reach Supabase.
 
 ---
 
 ## Persistent Login and Token Storage
 
-`session_storage.py` provides the same save, load, and delete operations to the rest of the application while selecting the storage implementation for the current platform.
+`session_storage.py` provides the same save, load, and delete operations to the
+rest of the application while selecting the storage implementation for the
+current platform.
 
-On desktop, `desktop_token_store.py` uses `keyring` to access a supported operating-system credential store:
+On desktop, `desktop_token_store.py` uses `keyring` to access a supported
+operating-system credential store:
 
 - Windows Credential Manager on Windows;
 - Keychain on macOS;
 - a supported Secret Service or KWallet backend on Linux.
 
-On Android, `android_token_store.py` uses PyJNIus to call `TokenVault.java`. The Java class uses Android Keystore for the encryption key and stores the encrypted refresh token in application-private preferences.
+On Android, `android_token_store.py` uses PyJNIus to call `TokenVault.java`. The
+Java class uses Android Keystore for the encryption key and stores the encrypted
+refresh token in application-private preferences.
 
-If secure storage is unavailable, the application does not save the refresh token in plaintext. The user may need to sign in again after restarting the application.
+If secure storage is unavailable, the application does not save the refresh
+token in plaintext. The user may need to sign in again after restarting the
+application.
 
-Older versions stored the refresh token in a local `session.json` file. When that file is encountered, the application attempts to move its token to secure storage and removes the old plaintext file. If the migration cannot be completed securely, the old file is removed and the user must sign in again.
+Older versions stored the refresh token in a local `session.json` file. When
+that file is encountered, the application attempts to move its token to secure
+storage and removes the old plaintext file. If the migration cannot be completed
+securely, the old file is removed and the user must sign in again.
 
-Tests replace the operating-system storage with in-memory fakes. They do not read or modify a developer's real saved credentials.
+Tests replace the operating-system storage with in-memory fakes. They do not
+read or modify a developer's real saved credentials.
 
 ---
 
 ## Language Settings
 
-`translations.py` contains the Italian and English interface strings. Screens and popups request a string by its key, then display it in the selected language.
+`translations.py` contains the Italian and English interface strings. Screens
+and popups request a string by its key, then display it in the selected
+language.
 
-`language_settings.py` saves the selected language in the application's local data directory. The preference is restored when the application starts again. Unlike a refresh token, the language setting is not a secret and does not require encrypted storage.
+`language_settings.py` saves the selected language in the application's local
+data directory. The preference is restored when the application starts again.
+Unlike a refresh token, the language setting is not a secret and does not
+require encrypted storage.
 
-The language controls appear on the login and registration screens, as well as in the home and food-list menus. Switching languages updates the application's interface text. A popup opened after the change uses the selected language.
+The language controls appear on the login and registration screens, as well as
+in the home and food-list menus. Switching languages updates the application's
+interface text. A popup opened after the change uses the selected language.
 
-Only interface text is translated. For example, a list named `Cena` remains `Cena` when the interface is switched to English. Food names, list names, and email addresses are treated as user data.
+Only interface text is translated. For example, a list named `Cena` remains
+`Cena` when the interface is switched to English. Food names, list names, and
+email addresses are treated as user data.
 
 ---
 
@@ -230,7 +281,8 @@ Only its owner can:
 
 A shared list is connected to an internal group through its `group_id`.
 
-Groups do not have a separate screen in the application. Users interact directly with personal and shared lists from the same list-management screen.
+Groups do not have a separate screen in the application. Users interact directly
+with personal and shared lists from the same list-management screen.
 
 When a shared list is created:
 
@@ -242,23 +294,25 @@ When a shared list is created:
 
 The permissions are:
 
-| Action | Owner | Member |
-| --- | :---: | :---: |
-| View the shared list | Yes | Yes |
-| View its foods | Yes | Yes |
-| Add and remove foods | Yes | Yes |
-| Rename the list | Yes | Yes |
-| View members | Yes | Yes |
-| Add members | Yes | No |
-| Remove other members | Yes | No |
-| Leave the list | No | Yes |
-| Delete the list for everyone | Yes | No |
+| Action                       | Owner | Member |
+| ---------------------------- | :---: | :----: |
+| View the shared list         |  Yes  |  Yes   |
+| View its foods               |  Yes  |  Yes   |
+| Add and remove foods         |  Yes  |  Yes   |
+| Rename the list              |  Yes  |  Yes   |
+| View members                 |  Yes  |  Yes   |
+| Add members                  |  Yes  |   No   |
+| Remove other members         |  Yes  |   No   |
+| Leave the list               |  No   |  Yes   |
+| Delete the list for everyone |  Yes  |   No   |
 
 A regular member can leave without deleting the list for the remaining users.
 
-Deleting a shared list removes its foods, memberships, and internal group through PostgreSQL cascade rules.
+Deleting a shared list removes its foods, memberships, and internal group
+through PostgreSQL cascade rules.
 
-The owner cannot currently leave or transfer ownership. Ownership transfer may be implemented in a future version.
+The owner cannot currently leave or transfer ownership. Ownership transfer may
+be implemented in a future version.
 
 ---
 
@@ -266,26 +320,34 @@ The owner cannot currently leave or transfer ownership. Ownership transfer may b
 
 Responsibilities are separated across multiple modules:
 
-- `main.py` manages application state, session renewal, the active list, language changes, and screen navigation;
+- `main.py` manages application state, session renewal, the active list,
+  language changes, and screen navigation;
 - `auth_client.py` communicates with Supabase Authentication;
-- `session_storage.py` selects secure token storage and handles migration from the older local file;
-- `desktop_token_store.py` uses supported desktop credential stores through `keyring`;
-- `android_token_store.py` connects Python to the Android Java implementation through PyJNIus;
-- `android_src/org/foodkivy/security/TokenVault.java` encrypts and stores the token on Android;
+- `session_storage.py` selects secure token storage and handles migration from
+  the older local file;
+- `desktop_token_store.py` uses supported desktop credential stores through
+  `keyring`;
+- `android_token_store.py` connects Python to the Android Java implementation
+  through PyJNIus;
+- `android_src/org/foodkivy/security/TokenVault.java` encrypts and stores the
+  token on Android;
 - `supabase_client.py` communicates with the Supabase REST API;
 - `auth_screen.py` implements login and password reset;
 - `signup_screen.py` implements registration;
 - `food_lists_screen.py` manages personal and shared lists;
-- `food_list_popups.py` contains the list creation, rename, delete, and leave popups;
+- `food_list_popups.py` contains the list creation, rename, delete, and leave
+  popups;
 - `food_popup.py` manages foods inside the active list;
 - `group_members_popup.py` manages shared-list members;
 - `translations.py` contains the Italian and English interface strings;
 - `language_settings.py` saves and loads the language preference;
 - `ui_components.py` contains reusable Kivy widgets.
 
-The application uses standard HTTP requests instead of the full Supabase Python SDK.
+The application uses standard HTTP requests instead of the full Supabase Python
+SDK.
 
-This keeps the Android dependency tree smaller and avoids transitive packages that are difficult to cross-compile with python-for-android.
+This keeps the Android dependency tree smaller and avoids transitive packages
+that are difficult to cross-compile with python-for-android.
 
 ---
 
@@ -313,7 +375,8 @@ The application uses:
 - `DELETE` to remove foods, lists, groups, and memberships;
 - RPC endpoints for protected membership operations.
 
-The access token identifies the current user. Database policies then determine which records that user is allowed to access.
+The access token identifies the current user. Database policies then determine
+which records that user is allowed to access.
 
 ---
 
@@ -331,14 +394,16 @@ A personal list has an `owner_id`.
 
 A shared list has a `group_id`.
 
-A database constraint ensures that a list belongs either to one user or to one group, never both.
+A database constraint ensures that a list belongs either to one user or to one
+group, never both.
 
 The `group_members` table stores the user's role:
 
 - `owner`;
 - `member`.
 
-When a group is created, a PostgreSQL trigger automatically inserts its creator into `group_members` as the owner.
+When a group is created, a PostgreSQL trigger automatically inserts its creator
+into `group_members` as the owner.
 
 Database functions support authorization and membership management, including:
 
@@ -358,7 +423,8 @@ The database policies enforce the following rules:
 
 - anonymous users cannot access food data;
 - users can access only their own personal lists;
-- users can access shared lists only when they belong to the corresponding group;
+- users can access shared lists only when they belong to the corresponding
+  group;
 - group members can view and modify foods in an accessible shared list;
 - only the owner can add other members;
 - only the owner can remove other members;
@@ -367,13 +433,16 @@ The database policies enforce the following rules:
 - the owner's membership cannot be removed;
 - only the owner can delete a shared list and its group.
 
-These permissions are enforced in PostgreSQL, not only by hiding buttons in the interface.
+These permissions are enforced in PostgreSQL, not only by hiding buttons in the
+interface.
 
-The application uses the Supabase publishable key or legacy `anon` key together with the authenticated user's access token.
+The application uses the Supabase publishable key or legacy `anon` key together
+with the authenticated user's access token.
 
 The `service_role` key must never be included in the client application.
 
-The SQL schema, policies, functions, and triggers are stored as versioned migrations in:
+The SQL schema, policies, functions, and triggers are stored as versioned
+migrations in:
 
 ```text
 supabase/migrations/
@@ -407,11 +476,13 @@ If the active list is empty, the user is asked to add foods first.
 
 The list-management screen displays personal and shared lists together.
 
-Shared lists are marked with `(condivisa)` in Italian or `(shared)` in English. The list name itself stays as the user entered it.
+Shared lists are marked with `(condivisa)` in Italian or `(shared)` in English.
+The list name itself stays as the user entered it.
 
 Selecting a list reveals its available actions.
 
-A shared-list owner sees the delete action, while a regular member sees the option to leave the list.
+A shared-list owner sees the delete action, while a regular member sees the
+option to leave the list.
 
 ### Food-management popup
 
@@ -422,13 +493,16 @@ The food-management popup contains:
 - buttons to add and delete foods;
 - status feedback.
 
-The same input is used for both adding and deleting a food. The two action buttons are displayed side by side and use the reusable `RoundedButton` component.
+The same input is used for both adding and deleting a food. The two action
+buttons are displayed side by side and use the reusable `RoundedButton`
+component.
 
 ### Member-management popup
 
 The member popup displays every user who can access a shared list.
 
-All members can view the participants. Only the owner sees the controls for adding or removing other members.
+All members can view the participants. Only the owner sees the controls for
+adding or removing other members.
 
 Duplicate memberships are rejected.
 
@@ -436,7 +510,8 @@ Duplicate memberships are rejected.
 
 `RoundedButton` draws its background with a Kivy `RoundedRectangle`.
 
-`MenuButton` extends it and draws the hamburger icon using three canvas lines, so the icon does not depend on a special font character.
+`MenuButton` extends it and draws the hamburger icon using three canvas lines,
+so the icon does not depend on a special font character.
 
 ---
 
@@ -496,7 +571,8 @@ background_source = (
 )
 ```
 
-Tall screens use `background_tall.png`, while standard displays use `background.png`.
+Tall screens use `background_tall.png`, while standard displays use
+`background.png`.
 
 ---
 
@@ -510,7 +586,8 @@ The application uses:
 Window.softinput_mode = "below_target"
 ```
 
-When the food input receives focus, the popup scrolls toward the field so that the input and buttons remain visible.
+When the food input receives focus, the popup scrolls toward the field so that
+the input and buttons remain visible.
 
 The focus handler runs only on Android:
 
@@ -519,7 +596,8 @@ if platform != "android" or not focused:
     return
 ```
 
-This prevents the popup from moving unnecessarily when the field is selected on desktop.
+This prevents the popup from moving unnecessarily when the field is selected on
+desktop.
 
 ---
 
@@ -529,69 +607,92 @@ This prevents the popup from moving unnecessarily when the field is selected on 
 
 The original version stored foods in a local JSON file.
 
-It focused on Python fundamentals, random selection, add and delete operations, and simple persistence.
+It focused on Python fundamentals, random selection, add and delete operations,
+and simple persistence.
 
 ### 2. Kivy graphical interface
 
-The project was converted into a graphical application using Kivy widgets, layouts, labels, buttons, text inputs, popups, custom fonts, and image assets.
+The project was converted into a graphical application using Kivy widgets,
+layouts, labels, buttons, text inputs, popups, custom fonts, and image assets.
 
 ### 3. Supabase persistence
 
-Local JSON food storage was replaced by a PostgreSQL database hosted on Supabase.
+Local JSON food storage was replaced by a PostgreSQL database hosted on
+Supabase.
 
 This introduced remote persistence and REST API communication.
 
 ### 4. Android packaging
 
-Buildozer and python-for-Android were introduced to package the project for Android.
+Buildozer and python-for-Android were introduced to package the project for
+Android.
 
-The Android application uses portrait orientation, Internet permission, a custom icon, and a reduced dependency set.
+The Android application uses portrait orientation, Internet permission, a custom
+icon, and a reduced dependency set.
 
 ### 5. Dependency redesign
 
 The first Supabase implementation used the full Python SDK.
 
-Some transitive dependencies were problematic to cross-compile for Android, so the data and authentication layers were rewritten using direct `requests` calls.
+Some transitive dependencies were problematic to cross-compile for Android, so
+the data and authentication layers were rewritten using direct `requests` calls.
 
 ### 6. Responsive redesign
 
-Testing on physical Android devices revealed issues involving pixel density, aspect ratios, background cropping, popup positioning, and the software keyboard.
+Testing on physical Android devices revealed issues involving pixel density,
+aspect ratios, background cropping, popup positioning, and the software
+keyboard.
 
-The interface was redesigned with `dp`, `sp`, adaptive images, proportional positioning, and scrollable content.
+The interface was redesigned with `dp`, `sp`, adaptive images, proportional
+positioning, and scrollable content.
 
 ### 7. Authentication and security
 
-Supabase Authentication, email confirmation, password reset, access tokens, protected requests, and PostgreSQL Row Level Security were added.
+Supabase Authentication, email confirmation, password reset, access tokens,
+protected requests, and PostgreSQL Row Level Security were added.
 
 ### 8. Multiple personal lists
 
-The original single list evolved into multiple personal lists, including automatic creation of a default list for every new user.
+The original single list evolved into multiple personal lists, including
+automatic creation of a default list for every new user.
 
 ### 9. Shared lists
 
-Shared lists introduced groups, memberships, roles, protected PostgreSQL functions, database triggers, cascade deletion, and membership-based access control.
+Shared lists introduced groups, memberships, roles, protected PostgreSQL
+functions, database triggers, cascade deletion, and membership-based access
+control.
 
-Groups remain an internal database implementation rather than a separate concept exposed in the interface.
+Groups remain an internal database implementation rather than a separate concept
+exposed in the interface.
 
 ### 10. Automated testing and CI
 
-The test suite was expanded to cover HTTP clients, application state, Kivy screens, popups, reusable components, personal lists, shared lists, membership permissions, Android-specific behaviour, and error paths.
+The test suite was expanded to cover HTTP clients, application state, Kivy
+screens, popups, reusable components, personal lists, shared lists, membership
+permissions, Android-specific behaviour, and error paths.
 
 GitHub Actions requires 100% statement coverage for the selected Python modules.
 
 ### 11. Persistent login and secure token storage
 
-The application now restores sessions after a restart and replaces saved refresh tokens when Supabase renews them.
+The application now restores sessions after a restart and replaces saved refresh
+tokens when Supabase renews them.
 
-Refresh tokens are stored in supported desktop credential stores or encrypted using Android Keystore. The older plaintext session file is removed during migration.
+Refresh tokens are stored in supported desktop credential stores or encrypted
+using Android Keystore. The older plaintext session file is removed during
+migration.
 
-The Android implementation was compiled into an APK and tested on a physical phone for login persistence and logout.
+The Android implementation was compiled into an APK and tested on a physical
+phone for login persistence and logout.
 
 ### 12. Italian and English interface
 
-Interface strings were moved into a shared translation table and connected to the application's screens and popups.
+Interface strings were moved into a shared translation table and connected to
+the application's screens and popups.
 
-Users can switch languages from the login and registration screens or from the menus after signing in. The language choice is saved on the device, while list names and food names remain unchanged.
+Users can switch languages from the login and registration screens or from the
+menus after signing in. The language choice is saved on the device, while list
+names and food names remain unchanged.
 
 ---
 
@@ -666,10 +767,12 @@ food_kivy/
 │   ├── flag_it.png
 │   └── icon.png
 ├── screenshots/
-│   ├── food-lists.png
-│   ├── food-popup.png
-│   ├── home.png
-│   └── login.png
+│   ├── food-lists.jpg
+│   ├── foods.jpg
+│   ├── home.jpg
+│   ├── login.jpg
+│   ├── menu.jpg
+│   └── recipe.jpg
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 20260908_initial_foods_schema.sql
@@ -721,7 +824,8 @@ food_kivy/
 └── README.md
 ```
 
-A local `config.py` file is also required, but it is excluded from Git because it contains the Supabase project configuration.
+A local `config.py` file is also required, but it is excluded from Git because
+it contains the Supabase project configuration.
 
 ---
 
@@ -738,7 +842,8 @@ Use the Supabase publishable key or legacy `anon` key.
 
 Never place the `service_role` key inside the application.
 
-`config.py` is included in `.gitignore` and must not be committed with real project values.
+`config.py` is included in `.gitignore` and must not be committed with real
+project values.
 
 ---
 
@@ -777,7 +882,9 @@ Run the application:
 python main.py
 ```
 
-Persistent login requires an available, supported operating-system credential store. If secure storage is unavailable, the application can still run, but the user may need to sign in again after closing it.
+Persistent login requires an available, supported operating-system credential
+store. If secure storage is unavailable, the application can still run, but the
+user may need to sign in again after closing it.
 
 ---
 
@@ -795,13 +902,17 @@ Run the tests with the same coverage requirement used by GitHub Actions:
 python -m pytest --cov=auth_client --cov=android_token_store --cov=desktop_token_store --cov=auth_screen --cov=food_lists_screen --cov=food_list_popups --cov=food_popup --cov=group_members_popup --cov=language_settings --cov=main --cov=session_storage --cov=signup_screen --cov=supabase_client --cov=translations --cov=ui_components --cov-report=term-missing --cov-fail-under=100
 ```
 
-GitHub Actions requires 100% statement coverage across the selected Python modules.
+GitHub Actions requires 100% statement coverage across the selected Python
+modules.
 
-These tests do not compile or execute `TokenVault.java`. The Android build verifies compilation, and installation on a physical device verifies the login and logout flow.
+These tests do not compile or execute `TokenVault.java`. The Android build
+verifies compilation, and installation on a physical device verifies the login
+and logout flow.
 
 Tests run automatically on every push and pull request.
 
-Xvfb provides a virtual display for Kivy tests on the GitHub Actions Ubuntu runner.
+Xvfb provides a virtual display for Kivy tests on the GitHub Actions Ubuntu
+runner.
 
 ---
 
@@ -826,7 +937,8 @@ android.ndk_api = 24
 android.add_src = android_src
 ```
 
-`android.add_src` includes the Java source that implements secure token storage through Android Keystore.
+`android.add_src` includes the Java source that implements secure token storage
+through Android Keystore.
 
 The application icon is configured with:
 
@@ -834,9 +946,13 @@ The application icon is configured with:
 icon.filename = images/icon.png
 ```
 
-The **Build APK** GitHub Actions workflow runs automatically on pushes to `main`. It can also be started manually for a selected branch using **Run workflow**.
+The **Build APK** GitHub Actions workflow runs automatically on pushes to
+`main`. It can also be started manually for a selected branch using **Run
+workflow**.
 
-The Android APK has been tested on a physical phone for persistent login and logout: the application retained the login after being closed and reopened, and returned to the login screen after logout and reopening.
+The Android APK has been tested on a physical phone for persistent login and
+logout: the application retained the login after being closed and reopened, and
+returned to the login screen after logout and reopening.
 
 ---
 
@@ -849,8 +965,10 @@ The Android APK has been tested on a physical phone for persistent login and log
 - The application requires an Internet connection for remote data operations.
 - Network errors have limited user-facing feedback.
 - Offline caching and retry handling are not implemented.
-- Persistent login depends on an available secure credential store on the device.
-- Access tokens that have already been issued remain valid until their expiry even after the corresponding refresh token is revoked.
+- Persistent login depends on an available secure credential store on the
+  device.
+- Access tokens that have already been issued remain valid until their expiry
+  even after the corresponding refresh token is revoked.
 
 ---
 
@@ -952,4 +1070,6 @@ The current version includes:
 - custom application branding and language-control flag images;
 - automated tests with a 100% statement-coverage requirement in CI.
 
-The authentication flow, personal lists, shared lists, member management, and food operations work on desktop. The persistent-login and logout flow has also been verified on a physical Android phone.
+The authentication flow, personal lists, shared lists, member management, and
+food operations work on desktop. The persistent-login and logout flow has also
+been verified on a physical Android phone.

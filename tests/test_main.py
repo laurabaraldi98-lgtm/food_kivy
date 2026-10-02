@@ -49,6 +49,8 @@ def app(tmp_path, monkeypatch):
     food_app.current_list_name = ""
     food_app.active_list_label = SimpleNamespace(text="")
     food_app.result = SimpleNamespace(text="")
+    food_app.selected_food = None
+    food_app.recipe_button = SimpleNamespace(disabled=True, opacity=0)
     food_app.root = SimpleNamespace(current="food")
 
     return food_app
@@ -495,3 +497,46 @@ def test_get_access_token_keeps_session_for_temporary_errors(
     assert load_refresh_token(app.user_data_dir) == "old-refresh-token"
     assert app.session["access_token"] == "old-access-token"
     assert app.root.current == "food"
+
+
+def test_choose_food_remembers_the_latest_selected_dish(app):
+    app.current_list_id = 7
+    app.food = ["Pasta", "Pizza"]
+
+    with patch("main.random.choice", side_effect=["Pasta", "Pizza"]):
+        app.choose_food(None)
+        assert app.selected_food == "Pasta"
+
+        app.choose_food(None)
+        assert app.selected_food == "Pizza"
+        assert app.result.text == "[b]Pizza[/b]"
+
+
+@pytest.mark.parametrize("list_id", [None, 7])
+def test_choose_food_clears_previous_dish_when_choice_is_unavailable(app, list_id):
+    app.selected_food = "Pizza"
+    app.current_list_id = list_id
+    app.food = []
+
+    app.choose_food(None)
+
+    assert app.selected_food is None
+
+
+def test_changing_food_list_clears_previous_dish(app):
+    app.selected_food = "Pizza"
+
+    with patch("main.get_foods", return_value=["Riso"]):
+        app.select_food_list({"id": 8, "name": "Cena"})
+
+    assert app.selected_food is None
+    assert app.result.text == ""
+
+
+def test_clearing_food_list_clears_previous_dish(app):
+    app.selected_food = "Pizza"
+
+    app.clear_active_food_list()
+
+    assert app.selected_food is None
+    assert app.result.text == ""

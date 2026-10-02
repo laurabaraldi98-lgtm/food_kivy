@@ -142,3 +142,72 @@ def test_changing_language_updates_visible_list_actions(app):
     assert {"View foods", "Rename", "Delete"} <= texts
     assert lists_screen.title_label.text == "My lists"
     assert lists_screen.language_flag.source == "images/flag_it.png"
+
+
+def test_recipe_button_appears_after_choice_and_hides_when_choice_is_cleared(app):
+    assert app.recipe_button.disabled
+    assert app.recipe_button.opacity == 0
+
+    app.current_list_id = 7
+    app.food = ["Pizza"]
+    app.choose_food(None)
+
+    assert app.selected_food == "Pizza"
+    assert not app.recipe_button.disabled
+    assert app.recipe_button.opacity == 1
+
+    app.clear_active_food_list()
+
+    assert app.selected_food is None
+    assert app.recipe_button.disabled
+    assert app.recipe_button.opacity == 0
+
+
+def test_recipe_button_hides_when_active_list_becomes_empty(app):
+    app.current_list_id = 7
+    app.food = ["Pizza"]
+    app.choose_food(None)
+
+    app.food = []
+    app.choose_food(None)
+
+    assert app.selected_food is None
+    assert app.recipe_button.disabled
+    assert app.recipe_button.opacity == 0
+
+
+def test_recipe_button_translates_without_changing_selected_dish(app):
+    app.current_list_id = 7
+    app.food = ["Pizza"]
+    app.choose_food(None)
+
+    app.set_language("en")
+
+    assert app.recipe_button.text == "Generate recipe"
+    assert app.selected_food == "Pizza"
+    assert not app.recipe_button.disabled
+
+    app.set_language("it")
+
+    assert app.recipe_button.text == "Genera ricetta"
+    assert app.selected_food == "Pizza"
+
+
+def test_recipe_button_opens_popup_for_selected_dish(app):
+    app.current_list_id = 7
+    app.food = ["Pizza"]
+    app.choose_food(None)
+    app.set_language("en")
+
+    with patch("main.RecipePopup") as popup:
+        app.recipe_button.dispatch("on_release")
+
+    popup.assert_called_once_with("Pizza", "en")
+    popup.return_value.open.assert_called_once_with()
+
+
+def test_recipe_popup_does_not_open_without_selected_dish(app):
+    with patch("main.RecipePopup") as popup:
+        app.open_recipe_popup(None)
+
+    popup.assert_not_called()

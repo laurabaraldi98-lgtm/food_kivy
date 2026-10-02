@@ -1,4 +1,4 @@
-name: Python tests
+name: Application tests
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
             'SUPABASE_KEY = "test-key"' \
             > config.py
 
-      - name: Run tests with coverage
+      - name: Run Python tests with coverage
         run: |
           xvfb-run -a python -m pytest \
             --cov=auth_client \
@@ -51,6 +51,8 @@ jobs:
             --cov=group_members_popup \
             --cov=language_settings \
             --cov=main \
+            --cov=recipe_client \
+            --cov=recipe_popup \
             --cov=session_storage \
             --cov=signup_screen \
             --cov=supabase_client \
@@ -58,3 +60,68 @@ jobs:
             --cov=ui_components \
             --cov-report=term-missing \
             --cov-fail-under=100
+
+  recipe-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: supabase/functions/generate-recipe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.7"
+
+      - name: Check formatting
+        run: deno fmt --check index.ts index_test.ts
+
+      - name: Check TypeScript types
+        run: deno check index.ts index_test.ts
+
+      - name: Lint recipe function and tests
+        run: deno lint index.ts index_test.ts
+
+      - name: Run recipe tests with coverage
+        run: deno test --allow-env --coverage=coverage index_test.ts
+
+      - name: Require full recipe coverage
+        run: deno coverage coverage --include='generate-recipe/index\.ts$' --threshold=100
+
+  database-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Start local database and apply migrations
+        run: supabase db start
+
+      - name: Run SQL quota tests
+        run: supabase test db supabase/tests/database/recipe_rate_limit_test.sql
+
+      - name: Run concurrent quota tests
+        run: |
+          python supabase/tests/database/recipe_rate_limit_concurrency_test.py \
+            --container supabase_db_food_kivy
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
