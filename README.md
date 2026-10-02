@@ -23,15 +23,20 @@ never translated automatically.
 
 ## Screenshots
 
-The screenshots below show the Italian interface.
+The screenshots below show the English interface. User-entered food and list
+names remain in their original language.
 
-|                                   Login                                   |                                  Home                                   |
-| :-----------------------------------------------------------------------: | :---------------------------------------------------------------------: |
-| <img src="screenshots/login.png" alt="Food App login screen" width="320"> | <img src="screenshots/home.png" alt="Food App home screen" width="320"> |
+|                                   Login                                   |                                       Random meal selection                                        |
+| :-----------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| <img src="screenshots/login.jpg" alt="Food App login screen" width="280"> | <img src="screenshots/home.jpg" alt="Selected dish with the recipe generation button" width="280"> |
 
-|                                Personal and shared lists                                |                                Food management                                 |
-| :-------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------: |
-| <img src="screenshots/food-lists.png" alt="Personal and shared food lists" width="320"> | <img src="screenshots/food-popup.png" alt="Food management popup" width="320"> |
+|                                                 Generated recipe                                                  |                                Personal and shared lists                                |
+| :---------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------: |
+| <img src="screenshots/recipe.jpg" alt="Generated recipe with servings, ingredients and instructions" width="280"> | <img src="screenshots/food-lists.jpg" alt="Personal and shared food lists" width="280"> |
+
+|                              Food management                              |                             Navigation and language selection                              |
+| :-----------------------------------------------------------------------: | :----------------------------------------------------------------------------------------: |
+| <img src="screenshots/foods.jpg" alt="Food management popup" width="280"> | <img src="screenshots/menu.jpg" alt="Navigation menu with language selection" width="280"> |
 
 ---
 
@@ -762,10 +767,12 @@ food_kivy/
 │   ├── flag_it.png
 │   └── icon.png
 ├── screenshots/
-│   ├── food-lists.png
-│   ├── food-popup.png
-│   ├── home.png
-│   └── login.png
+│   ├── food-lists.jpg
+│   ├── foods.jpg
+│   ├── home.jpg
+│   ├── login.jpg
+│   ├── menu.jpg
+│   └── recipe.jpg
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 20260908_initial_foods_schema.sql
